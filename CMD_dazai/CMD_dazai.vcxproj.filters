@@ -54,6 +54,15 @@
     <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DlgCANCOFIG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlCAN.H">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LVDS_DLL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CMD_dazai.cpp">
@@ -81,6 +90,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DynComboBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgCANCOFIG.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

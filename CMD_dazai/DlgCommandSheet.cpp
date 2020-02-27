@@ -6,9 +6,6 @@
 #include "DlgCommandSheet.h"
 #include "afxdialogex.h"
 #include "DlgAddCommand.h"
-
-// CDlgCommandSheet dialog
-
 IMPLEMENT_DYNAMIC(CDlgCommandSheet, CDialogEx)
 
 CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
@@ -31,6 +28,7 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CDlgCommandSheet, CDialogEx)
 	ON_WM_SIZE()
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_CONTROL, &CDlgCommandSheet::OnNMDblclkListControl)
+	ON_BN_CLICKED(IDC_BUTTON_CANPARA, &CDlgCommandSheet::OnBnClickedButtonCanpara)
 END_MESSAGE_MAP()
 
 
@@ -417,5 +415,117 @@ void CDlgCommandSheet::InsertArgValue(unsigned char *pDst, unsigned char *pSrc, 
 			pDst[i + byteStart] |= (pSrc[i] >> bitStart) & mask;
 		}
 		pDst[i + byteStart] |= (pSrc[i - 1] << (8 - bitStart)) & mask;
+	}
+}
+UINT ReceiveThread(void *param)
+{
+	CDlgCommandSheet *dlgCommandSheet = (CDlgCommandSheet*)param;
+	CDlgCANCOFIG *dlgCan = &(dlgCommandSheet->dlgCanConfig);
+	VCI_CAN_OBJ frameinfo[50];
+	VCI_ERR_INFO errinfo;
+	int len = 1;
+	int i = 0;
+	CString str, tmpstr;
+	int m_recvcount = 0;
+	while (1)
+	{
+		Sleep(1);
+		if ((dlgCan->m_connect == 0))
+			break;
+		len = VCI_Receive(dlgCan->m_devtype, dlgCan->m_devind, dlgCan->m_cannum, frameinfo, 50, 200);
+		if (len <= 0)
+		{
+			//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
+			//千万不能省略这一步（即使你可能不想知道错误码是什么）
+			VCI_ReadErrInfo(dlgCan->m_devtype, dlgCan->m_devind, dlgCan->m_cannum, &errinfo);
+		}
+		else
+		{
+#if 1
+			m_recvcount += len;
+			str.Format("         本次接收 %d 帧  总接收 %d 帧", len, m_recvcount);
+//			box->InsertString(box->GetCount(), str);
+			for (i = 0; i < len; i++)
+			{
+				str = "接收到CAN帧:  ";
+				if (frameinfo[i].TimeFlag == 0)
+					tmpstr = "时间标识:无  ";
+				else
+					tmpstr.Format("时间标识:%08x ", frameinfo[i].TimeStamp);
+				str += tmpstr;
+				tmpstr.Format("帧ID:%08x ", frameinfo[i].ID);
+				str += tmpstr;
+				str += "帧格式:";
+				if (frameinfo[i].RemoteFlag == 0)
+					tmpstr = "数据帧 ";
+				else
+					tmpstr = "远程帧 ";
+				str += tmpstr;
+				str += "帧类型:";
+				if (frameinfo[i].ExternFlag == 0)
+					tmpstr = "标准帧 ";
+				else
+					tmpstr = "扩展帧 ";
+				str += tmpstr;
+//				box->InsertString(box->GetCount(), str);
+				if (frameinfo[i].RemoteFlag == 0)
+				{
+					str = "数据:";
+					if (frameinfo[i].DataLen > 8)
+						frameinfo[i].DataLen = 8;
+					for (int j = 0; j < frameinfo[i].DataLen; j++)
+					{
+						tmpstr.Format("%02x ", frameinfo[i].Data[j]);
+						str += tmpstr;
+					}
+					//EnterCriticalSection(&(dlg->m_Section));
+					//LeaveCriticalSection(&(dlg->m_Section));
+	//				box->InsertString(box->GetCount(), str);
+				}
+				// 				if (box->GetCount()>50)
+				// 				{
+				// 					box->ResetContent();
+				// 				}
+			}
+			if (1)
+			{
+				//	frameinfo[0].Data[0]=0xff;
+				//	frameinfo[0].Data[1]=0xff;
+				ULONG ret = VCI_Transmit(dlgCan->m_devtype, dlgCan->m_devind, dlgCan->m_cannum, &frameinfo[0], len);
+
+				CTime tm = CTime::GetCurrentTime();
+				if ((int)ret != len)
+				{
+					str.Format("本次回复 %d 帧  实际回复 %d 帧 总回复 %d 帧 ----------回复不正常", len, ret, ret);
+
+				}
+				else
+				{
+					str.Format("本次回复 %d 帧  实际回复 %d 帧 总回复 %d 帧", len, ret, ret);
+				}
+//				box->InsertString(box->GetCount(), str);
+				str = tm.Format("%Y_%m_%d_%H_%M_%S") + " --- " + str;
+//				dlgCan->m_f.Write(str, str.GetLength());
+			}
+//			box->SetCurSel(box->GetCount() - 1);
+#endif
+
+
+		}
+	}
+	return 0;
+}
+void CDlgCommandSheet::OnBnClickedButtonCanpara()
+{
+	// TODO: Add your control notification handler code here
+	char buffer[1024];	
+
+	if (dlgCanConfig.DoModal() == IDOK)
+	{
+		if (dlgCanConfig.m_connect)
+		{
+			AfxBeginThread(ReceiveThread, this);
+		}
+
 	}
 }

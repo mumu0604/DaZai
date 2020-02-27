@@ -4,6 +4,7 @@
 #include "afxcmn.h"
 #include "Xml.h"	// Added by ClassView
 #include "Common.h"
+#include "DlgCANCOFIG.h"
 
 using namespace std;
 // CDlgCommandSheet dialog
@@ -34,6 +35,7 @@ public:
 	}control;
 	CRect m_rect;
 	list<control*> m_con_list;
+	CDlgCANCOFIG dlgCanConfig;
 	virtual BOOL OnInitDialog();
 	CListCtrl m_ListCtrlCommand;
 	CXML m_xml;
@@ -45,4 +47,5 @@ public:
 	void GetCmdInfo(CmdInfo *m_pCmdInfo[256]);
 	void InsertArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
 	afx_msg void OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnBnClickedButtonCanpara();
 };
