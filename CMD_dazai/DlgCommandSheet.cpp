@@ -430,7 +430,7 @@ UINT ReceiveThread(void *param)
 	while (1)
 	{
 		Sleep(1);
-		if ((dlgCan->m_connect == 0))
+		if ((dlgCan->m_connect_CAN == 0))
 			break;
 		len = VCI_Receive(dlgCan->m_devtype, dlgCan->m_devind, dlgCan->m_cannum, frameinfo, 50, 200);
 		if (len <= 0)
@@ -522,7 +522,7 @@ void CDlgCommandSheet::OnBnClickedButtonCanpara()
 
 	if (dlgCanConfig.DoModal() == IDOK)
 	{
-		if (dlgCanConfig.m_connect)
+		if (dlgCanConfig.m_connect_CAN)
 		{
 			AfxBeginThread(ReceiveThread, this);
 		}
