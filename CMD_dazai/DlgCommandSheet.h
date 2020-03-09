@@ -5,6 +5,7 @@
 #include "Xml.h"	// Added by ClassView
 #include "Common.h"
 #include "DlgCANCOFIG.h"
+#include "afxwin.h"
 
 using namespace std;
 // CDlgCommandSheet dialog
@@ -48,4 +49,24 @@ public:
 	void InsertArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
 	afx_msg void OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedButtonCanpara();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	void SetCurrentTimer();
+	SYSTEMTIME m_GPSTimeNowday;
+	CMenu m_menu;
+	unsigned char m_bus_flag;
+	ULARGE_INTEGER m_base_relative;
+	afx_msg void OnNMRClickListControl(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnCmdSend();
+	afx_msg void OnCmdMoveUp();
+	afx_msg void OnCmdMoveDown();
+	afx_msg void OnCmdInsert();
+	afx_msg void OnCmdDelete();
+	afx_msg void OnCmdDeleteall();
+	afx_msg void OnBnClickedButtonCmdInput();
+	afx_msg void OnBnClickedButtonOutput();
+	void AddCmdToList(CMD_WN *pCmd, int index, int bNew);
+	CString GetAbsTime(__int64 sec);
+	void ShowInfo(CString str);
+	CString m_StrCMDsend;
+	CEdit m_pEditCmdSend;
 };

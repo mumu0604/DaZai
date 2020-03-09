@@ -22,6 +22,7 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_CONTROL, m_ListCtrlCommand);
+	DDX_Control(pDX, IDC_EDIT_CMD_OUTPUT, m_pEditCmdSend);
 }
 
 
@@ -29,6 +30,16 @@ BEGIN_MESSAGE_MAP(CDlgCommandSheet, CDialogEx)
 	ON_WM_SIZE()
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_CONTROL, &CDlgCommandSheet::OnNMDblclkListControl)
 	ON_BN_CLICKED(IDC_BUTTON_CANPARA, &CDlgCommandSheet::OnBnClickedButtonCanpara)
+	ON_WM_TIMER()
+	ON_NOTIFY(NM_RCLICK, IDC_LIST_CONTROL, &CDlgCommandSheet::OnNMRClickListControl)
+	ON_COMMAND(ID_CMD_SEND, &CDlgCommandSheet::OnCmdSend)
+	ON_COMMAND(ID_CMD_MOVE_UP, &CDlgCommandSheet::OnCmdMoveUp)
+	ON_COMMAND(ID_CMD_MOVE_DOWN, &CDlgCommandSheet::OnCmdMoveDown)
+	ON_COMMAND(ID_CMD_INSERT, &CDlgCommandSheet::OnCmdInsert)
+	ON_COMMAND(ID_CMD_DELETE, &CDlgCommandSheet::OnCmdDelete)
+	ON_COMMAND(ID_CMD_DELETEALL, &CDlgCommandSheet::OnCmdDeleteall)
+	ON_BN_CLICKED(IDC_BUTTON_CMD_INPUT, &CDlgCommandSheet::OnBnClickedButtonCmdInput)
+	ON_BN_CLICKED(IDC_BUTTON_OUTPUT, &CDlgCommandSheet::OnBnClickedButtonOutput)
 END_MESSAGE_MAP()
 
 
@@ -103,11 +114,11 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	}LIST_HEAD;
 
 	LIST_HEAD head[] = {
-		{ "序号", 36 },
-		{ "分系统", 60 },
+		{ "序号", 30 },
+		{ "分系统", 30 },
 		{ "总线", 40 },
-		{ "绝对时间", 180 },
-		{ "指令功能描述", 200 },
+		{ "绝对时间", 240 },
+		{ "指令功能描述", 180 },
 		{ "指令码", 50 },
 		{ "参数长度", 60 },
 		{ "参数", 660 }
@@ -127,6 +138,14 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	// TODO:  Add extra initialization here
 	get_control_original_proportion();
 	GetCmdInfo(m_pCmdInfo);
+	GetLocalTime(&m_GPSTimeNowday);
+	SetTimer(0, 500, NULL);
+
+	m_menu.LoadMenu(IDR_MENUCMD);
+	CMenu *pMenu;
+	pMenu = m_menu.GetSubMenu(0);
+
+
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -153,8 +172,8 @@ void CDlgCommandSheet::OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult)
 		if (dlgAddCommand.DoModal() == IDOK)
 		{
 
-// 			AddCmdToList(&cmd, m_iRealCmdCnt, 1);
-// 			memcpy(&m_cmdAddInfo[m_iRealCmdCnt], &cmd, sizeof(CMD_WN));
+			AddCmdToList(&cmd, m_iRealCmdCnt, 1);
+			memcpy(&m_cmdAddInfo[m_iRealCmdCnt], &cmd, sizeof(CMD_WN));
 			m_iRealCmdCnt++;
 		}
 	}
@@ -178,6 +197,127 @@ void CDlgCommandSheet::OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult)
 
 	m_ListCtrlCommand.SetSelectionMark(-1);
 	*pResult = 0;
+}
+CString CDlgCommandSheet::GetAbsTime(__int64 sec)
+{
+	SYSTEMTIME t;
+	CString strBuf1, strBuf2;
+	ULARGE_INTEGER base;
+
+	base.QuadPart = sec*SEC_PER_100ns;
+	FileTimeToSystemTime((FILETIME *)&base, &t);
+
+	strBuf1 = "";
+	strBuf2.Format("%04d年", t.wYear);
+	strBuf1 += strBuf2;
+
+	strBuf2.Format("%02d月", t.wMonth);
+	strBuf1 += strBuf2;
+	strBuf2.Format("%02d日", t.wDay);
+	strBuf1 += strBuf2;
+
+	strBuf2.Format("%02d时%02d分%02d秒",
+		t.wHour, t.wMinute, t.wSecond);
+	strBuf1 += strBuf2;
+	return strBuf1;
+}
+void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
+{
+	int i, j, k;
+	int iRow;
+	CString strBuf, strBuf1;
+
+	CString strDev;
+
+	CmdInfo *pCmdInfo;
+	CMD_WN *pAddedCmd;
+
+	unsigned char temp[MAX_ARG_LENGTH];
+	pCmd->dev_id = 0x33;
+//	strDev = GetDeviceName(pCmd->dev_id);
+	strDev = "试验机";
+	if (!strDev.Compare("无效!")){
+		MessageBox("设备不存在,指令插入/替换失败!", "警告");
+		return;
+	}
+	pCmdInfo = m_pCmdInfo[pCmd->cmd_id];
+	if (!pCmdInfo){
+		MessageBox("指令不存在,指令插入/替换失败!", "警告");
+		return;
+	}
+
+	iRow = m_ListCtrlCommand.GetItemCount();
+	// 	if (index >= iRow){
+	// 		MessageBox("指令定位错误,指令插入/替换失败!", "警告");
+	// 		return;
+	// 	}
+	if (index < 0){
+		index = iRow;
+	}
+	pAddedCmd = (CMD_WN *)malloc(sizeof(CMD_WN));
+	memcpy(pAddedCmd, pCmd, sizeof(CMD_WN));
+	if (!bNew){
+		free((CMD *)m_ListCtrlCommand.GetItemData(index));
+	}
+	else{
+		m_ListCtrlCommand.InsertItem(index, "");
+		for (i = index; i < m_ListCtrlCommand.GetItemCount(); i++){
+			strBuf.Format("%0d", i);
+			m_ListCtrlCommand.SetItemText(i, COL_SEQ, strBuf);
+		}
+	}
+	m_ListCtrlCommand.SetItemData(index, (DWORD)pAddedCmd);
+
+	m_ListCtrlCommand.SetItemText(index, COL_DEV, strDev);
+
+	if (pAddedCmd->bus_flag){
+		m_ListCtrlCommand.SetItemText(index, COL_BUS, "B");
+	}
+	else{
+		m_ListCtrlCommand.SetItemText(index, COL_BUS, "A");
+	}
+	if (pAddedCmd->immediate_flag){
+		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, "立即令");
+	}
+	else{
+		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, GetAbsTime(pAddedCmd->time));
+	}
+
+	m_ListCtrlCommand.SetItemText(index, COL_DESC, (char *)pCmdInfo->cmd_name);
+
+	strBuf.Format("%02X", pAddedCmd->cmd_id);
+	m_ListCtrlCommand.SetItemText(index, COL_CODE, strBuf);
+
+	strBuf.Format("%02d", pCmdInfo->arg_byte_num);
+	m_ListCtrlCommand.SetItemText(index, COL_ARG_LEN, strBuf);
+
+	strBuf = "";
+	for (j = 0; j < pCmdInfo->arg_num; j++){
+		ExtractArgValue(temp, pAddedCmd->args, pCmdInfo->bit_start[j], pCmdInfo->arg_length[j]);
+		for (k = 0; k < pCmdInfo->arg_length[j] / 8; k++){
+			strBuf1.Format("%02X", temp[k]);
+			strBuf += strBuf1;
+		}
+		if (pCmdInfo->arg_length[j] & 0x7){
+			if (pCmdInfo->input_type[j] == 0){
+				temp[k] >>= (8 - (pCmdInfo->arg_length[j] & 0x7));
+			}
+			strBuf1.Format("%02X", temp[k]);
+			strBuf += strBuf1;
+		}
+		strBuf += " ";
+	}
+	m_ListCtrlCommand.SetItemText(index, COL_ARG, strBuf);
+
+	LV_COLUMN lvc;
+	lvc.mask = LVCF_TEXT;
+
+	lvc.pszText = _T("绝对时间");
+	m_ListCtrlCommand.SetColumn(COL_ABS_TIME, &lvc);
+	lvc.pszText = _T("分系统");
+	m_ListCtrlCommand.SetColumn(COL_DEV, &lvc);
+	//	m_ListCtrlCommand.SetItemState(index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+	return;
 }
 void CDlgCommandSheet::ExtractArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length)
 {
@@ -528,4 +668,297 @@ void CDlgCommandSheet::OnBnClickedButtonCanpara()
 		}
 
 	}
+}
+
+void CDlgCommandSheet::SetCurrentTimer()
+{
+	CString strBuf;
+	SYSTEMTIME t;
+	GetLocalTime(&t);
+	strBuf.Format("%03d日%02d时%02d分%02d秒%03d毫秒",
+		t.wDay-m_GPSTimeNowday.wDay,
+		t.wHour,
+		t.wMinute,
+		t.wSecond,
+		t.wMilliseconds);
+	GetDlgItem(IDC_BUTTON_CURRENTTIME)->SetWindowText(strBuf);
+}
+void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: Add your message handler code here and/or call default
+	SetCurrentTimer();
+	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void CDlgCommandSheet::OnNMRClickListControl(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	CMenu* pPopup = m_menu.GetSubMenu(0);
+	POINT point;
+	GetCursorPos(&point);
+	pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, point.x, point.y, CWnd::FromHandle(m_hWnd));
+
+	*pResult = 0;
+}
+
+void CDlgCommandSheet::ShowInfo(CString str)
+{
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	m_StrCMDsend.Format(m_StrCMDsend + "%04d-%02d-%02d %02d:%02d:%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	m_StrCMDsend += "：";
+	m_StrCMDsend += str;
+	m_StrCMDsend += "\r\n";
+	m_pEditCmdSend.SetWindowTextA(m_StrCMDsend);
+	m_pEditCmdSend.LineScroll(m_pEditCmdSend.GetLineCount(), 0);
+}
+void CDlgCommandSheet::OnCmdSend()
+{
+	// TODO: Add your command handler code here
+
+	int i = 0, iListIndex = -1;
+	CString strTxt;
+	int cmdIdx;
+	bool reb = false;
+	
+	cmdIdx = m_ListCtrlCommand.GetSelectionMark();
+	if (cmdIdx < 0)
+	{
+		MessageBox("未选定指令！");
+		return;
+	}
+// 	OnSend();
+// 	reb = m_pInterface->SendCmd(m_COMportNum, 0, 32, (unsigned char *)m_CMDBuf, false);
+	if (reb)
+	{
+		ShowInfo("指令发送成功");
+	}
+	else
+	{
+		ShowInfo("指令发送失败");
+	}
+
+}
+
+
+void CDlgCommandSheet::OnCmdMoveUp()
+{
+	// TODO: Add your command handler code here
+	int i = 0, iListIndex = -1;
+	CString strTxt;
+	CString Str[2][8];
+	CMD_WN m_cmdAddInfotemp;
+	int cmdIdx;
+	iListIndex = m_ListCtrlCommand.GetSelectionMark();
+	if (!m_ListCtrlCommand.GetItemState(iListIndex, LVIS_FOCUSED)){
+		MessageBox("请先选择需上移的指令！", "错误");
+		return;
+	}
+	if (iListIndex < 1)
+	{
+		MessageBox("指令已经是最上面的啦！", "错误");
+		return;
+	}
+	memcpy(&m_cmdAddInfotemp, m_cmdAddInfo + iListIndex - 1, sizeof(CMD_WN));
+	memcpy(m_cmdAddInfo + iListIndex - 1, m_cmdAddInfo + iListIndex, sizeof(CMD_WN));
+	memcpy(m_cmdAddInfo + iListIndex, &m_cmdAddInfotemp, sizeof(CMD_WN));
+	CMD_WN *PCMD;
+	PCMD = (CMD_WN *)malloc(sizeof(CMD_WN));
+	PCMD = (CMD_WN *)m_ListCtrlCommand.GetItemData(iListIndex - 1);
+	m_ListCtrlCommand.SetItemData(iListIndex - 1, (DWORD)((CMD_WN *)m_ListCtrlCommand.GetItemData(iListIndex)));
+	m_ListCtrlCommand.SetItemData(iListIndex, (DWORD)PCMD);
+
+	for (i = 1; i < 8; i++)
+	{
+		Str[0][i] = m_ListCtrlCommand.GetItemText(iListIndex - 1, i);
+		Str[1][i] = m_ListCtrlCommand.GetItemText(iListIndex, i);
+		m_ListCtrlCommand.SetItemText(iListIndex - 1, i, Str[1][i]);
+		m_ListCtrlCommand.SetItemText(iListIndex, i, Str[0][i]);
+	}
+	m_ListCtrlCommand.SetSelectionMark(-1);
+}
+
+
+void CDlgCommandSheet::OnCmdMoveDown()
+{
+	// TODO: Add your command handler code here
+	int i = 0, iListIndex = -1;
+	CString strTxt;
+	CString Str[2][8];
+	CMD_WN m_cmdAddInfotemp;
+	int cmdIdx;
+	iListIndex = m_ListCtrlCommand.GetSelectionMark();
+	int totalCMD = m_ListCtrlCommand.GetItemCount();
+	if (!m_ListCtrlCommand.GetItemState(iListIndex, LVIS_FOCUSED)){
+		MessageBox("请先选择需上移的指令！", "错误");
+		return;
+	}
+	if (iListIndex >= totalCMD - 1)
+	{
+		MessageBox("指令已经是最下面的啦！", "错误");
+		return;
+	}
+	memcpy(&m_cmdAddInfotemp, m_cmdAddInfo + iListIndex + 1, sizeof(CMD_WN));
+	memcpy(m_cmdAddInfo + iListIndex + 1, m_cmdAddInfo + iListIndex, sizeof(CMD_WN));
+	memcpy(m_cmdAddInfo + iListIndex, &m_cmdAddInfotemp, sizeof(CMD_WN));
+	CMD_WN *PCMD;
+	PCMD = (CMD_WN *)malloc(sizeof(CMD_WN));
+	PCMD = (CMD_WN *)m_ListCtrlCommand.GetItemData(iListIndex + 1);
+	m_ListCtrlCommand.SetItemData(iListIndex + 1, (DWORD)((CMD_WN *)m_ListCtrlCommand.GetItemData(iListIndex)));
+	m_ListCtrlCommand.SetItemData(iListIndex, (DWORD)PCMD);
+	for (i = 1; i < 8; i++)
+	{
+		Str[0][i] = m_ListCtrlCommand.GetItemText(iListIndex, i);
+		Str[1][i] = m_ListCtrlCommand.GetItemText(iListIndex + 1, i);
+		m_ListCtrlCommand.SetItemText(iListIndex, i, Str[1][i]);
+		m_ListCtrlCommand.SetItemText(iListIndex + 1, i, Str[0][i]);
+	}
+	m_ListCtrlCommand.SetSelectionMark(-1);
+}
+
+
+void CDlgCommandSheet::OnCmdInsert()
+{
+	CMD_WN cmd;
+	CDlgAddCommand dlgAddCmd(this, &cmd, 1);
+	int index;
+
+	index = m_ListCtrlCommand.GetSelectionMark();
+
+	if (!m_ListCtrlCommand.GetItemState(index, LVIS_FOCUSED)){
+		MessageBox("请先选择插入位置！", "错误");
+		return;
+	}
+
+	unsigned int time;
+	CMD_WN *pCmd, *pCmd1;
+	pCmd = (CMD_WN *)m_ListCtrlCommand.GetItemData(index);
+	cmd.dev_id = pCmd->dev_id;
+
+
+	for (int i = index - 1; i >= 0; i--){
+		pCmd1 = (CMD_WN *)m_ListCtrlCommand.GetItemData(i);
+		if (pCmd1->dev_id != cmd.dev_id){
+			continue;
+		}
+		if (pCmd1->immediate_flag){
+			continue;
+		}
+		time = pCmd1->time;
+		break;
+	}
+
+	cmd.bus_flag = m_bus_flag;
+	int ret = dlgAddCmd.DoModal();
+	if (ret == IDOK){
+		AddCmdToList(&cmd, index, 1);
+		memcpy(&m_cmdAddInfo[m_iRealCmdCnt], &cmd, sizeof(CMD_WN));
+		m_iRealCmdCnt++;
+		//		m_list.DeleteItem(index);
+
+	}
+	m_ListCtrlCommand.SetSelectionMark(-1); 
+	// TODO: Add your command handler code here
+
+}
+
+
+void CDlgCommandSheet::OnCmdDelete()
+{
+	// TODO: Add your command handler code here
+	int i = 0, iListIndex = -1;
+	CString strTxt;
+	int cmdIdx;
+	iListIndex = m_ListCtrlCommand.GetSelectionMark();
+	if (!m_ListCtrlCommand.GetItemState(iListIndex, LVIS_FOCUSED)){
+		MessageBox("请先选择需删除的指令！", "错误");
+		return;
+	}
+	for (int i = iListIndex; i < MAXCOMMAND - 1; i++)
+	{
+		memcpy(m_cmdAddInfo + i, m_cmdAddInfo + i + 1, sizeof(CMD_WN));
+	}
+	m_iRealCmdCnt -= 1;
+	CMD_WN *pCmd;
+	pCmd = (CMD_WN *)m_ListCtrlCommand.GetItemData(iListIndex);
+	m_ListCtrlCommand.DeleteItem(iListIndex);
+
+	for (int i = iListIndex; i < m_ListCtrlCommand.GetItemCount(); i++){
+		strTxt.Format("%d", i);
+		m_ListCtrlCommand.SetItemText(i, COL_SEQ, strTxt);
+	}
+	m_ListCtrlCommand.SetSelectionMark(-1);
+}
+
+
+void CDlgCommandSheet::OnCmdDeleteall()
+{
+	// TODO: Add your command handler code here
+	m_iRealCmdCnt = 0;
+	m_ListCtrlCommand.DeleteAllItems();
+
+	m_ListCtrlCommand.SetSelectionMark(-1);
+}
+
+
+void CDlgCommandSheet::OnBnClickedButtonCmdInput()
+{
+	// TODO: Add your control notification handler code here
+	CFileDialog dlg(TRUE, "QCmdList", NULL,
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ENABLESIZING | OFN_EXPLORER | OFN_NOCHANGEDIR,
+		"QCmdXml Files (*.bin)|*.bin||", NULL);
+	//		"QCmdList Files (*.cls)|*.cls|QCmdLog Files (*.clg)|*.clg|QCmdXml Files (*.xml)|*.xml||", NULL);
+	if (dlg.DoModal() != IDOK)
+		return;
+
+	m_ListCtrlCommand.DeleteAllItems();
+	CString strFileName = dlg.GetPathName();
+	CString strExt = dlg.GetFileExt();
+	m_iRealCmdCnt = 0;
+//	LoadFromPLD(strFileName);
+}
+
+
+void CDlgCommandSheet::OnBnClickedButtonOutput()
+{
+	// TODO: Add your control notification handler code here
+	if (!m_ListCtrlCommand.GetItemCount()){
+		MessageBox("指令都没有,输出个鬼啊!", "错误");
+		return;
+	}
+	FILE *fp;
+	int cmdIndex = 0;
+	int cmdCntIn64B = 0;
+	int cnt_64B = 0;
+	int leftByteOf64B = 64;
+
+	char filter[] = "QCmdList Files(*.bin) |*.bin|QCmdTxt Files(*.txt) |*.txt||";
+	CString FileName;
+	CFileDialog dlgOpen(FALSE, NULL, TEXT("list"), OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ENABLESIZING | OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_FILEMUSTEXIST, (LPCTSTR)filter, NULL);
+	if (dlgOpen.DoModal() == IDOK)
+		FileName = dlgOpen.GetPathName();
+	else
+		return;
+	CString strExt;
+	strExt = dlgOpen.GetFileExt();
+
+	if (!strcmp((LPCTSTR)strExt, "")){
+		if (dlgOpen.m_ofn.nFilterIndex == 1){
+			strExt = "bin";
+			FileName += ".bin";
+		}
+		else{
+			strExt = "txt";
+			FileName += ".txt";
+		}
+	}
+
+	CFile pld_file;
+
+	pld_file.Open(FileName, CFile::modeCreate | CFile::modeWrite | CFile::typeBinary, NULL);
+//	SaveToPLD(&pld_file);
+	pld_file.Close();
+	AfxMessageBox(_T("导出成功！"));
 }
