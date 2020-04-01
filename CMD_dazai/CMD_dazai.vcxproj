@@ -80,7 +80,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>./libxml2/include;</AdditionalIncludeDirectories>
     </ClCompile>
@@ -114,10 +114,13 @@
     <ClInclude Include="DlgAddCommand.h" />
     <ClInclude Include="DlgCANCOFIG.h" />
     <ClInclude Include="DlgCommandSheet.h" />
+    <ClInclude Include="DlgPlotSheet.h" />
     <ClInclude Include="DlgRefreshSheet.h" />
     <ClInclude Include="DynComboBox.h" />
     <ClInclude Include="DynEdit.h" />
+    <ClInclude Include="ListCtrlCl.h" />
     <ClInclude Include="LVDS_DLL.h" />
+    <ClInclude Include="ReplayConfig.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -129,9 +132,12 @@
     <ClCompile Include="DlgAddCommand.cpp" />
     <ClCompile Include="DlgCANCOFIG.cpp" />
     <ClCompile Include="DlgCommandSheet.cpp" />
+    <ClCompile Include="DlgPlotSheet.cpp" />
     <ClCompile Include="DlgRefreshSheet.cpp" />
     <ClCompile Include="DynComboBox.cpp" />
     <ClCompile Include="DynEdit.cpp" />
+    <ClCompile Include="ListCtrlCl.cpp" />
+    <ClCompile Include="ReplayConfig.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

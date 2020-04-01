@@ -5,6 +5,7 @@
 #include "Xml.h"	// Added by ClassView
 #include "Common.h"
 #include "DlgCANCOFIG.h"
+#include "ListCtrlCl.h"
 #include "afxwin.h"
 
 using namespace std;
@@ -38,7 +39,7 @@ public:
 	list<control*> m_con_list;
 	CDlgCANCOFIG dlgCanConfig;
 	virtual BOOL OnInitDialog();
-	CListCtrl m_ListCtrlCommand;
+	CListCtrlCl m_ListCtrlCommand;
 	CXML m_xml;
 	int m_iRealCmdCnt;
 	CMD_WN m_cmdAddInfo[MAXCOMMAND];
@@ -69,4 +70,7 @@ public:
 	void ShowInfo(CString str);
 	CString m_StrCMDsend;
 	CEdit m_pEditCmdSend;
+	afx_msg void OnBnClickedButtonCmdsend();
+	int m_editCmdSendCnt;
+	int m_editCmdReactCnt;
 };

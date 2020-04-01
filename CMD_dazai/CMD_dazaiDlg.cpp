@@ -102,11 +102,15 @@ BOOL CCMD_dazaiDlg::OnInitDialog()
 
 	// TODO: Add extra initialization here
 	m_CMD_tab.InsertItem(0, _T("运行控制"));
-	m_CMD_tab.InsertItem(1, _T("实时工参"));
+	m_CMD_tab.InsertItem(1, _T("遥测实时"));
+	m_CMD_tab.InsertItem(2, _T("日志回放"));
+	m_CMD_tab.InsertItem(3, _T("数据处理"));
 
 	//创建两个对话框
 	m_CommandSheet.Create(IDD_DLGCOMMANDSHEET, &m_CMD_tab);
 	m_RefreshSheet.Create(IDD_DLGREFRESHSHEET, &m_CMD_tab);
+	m_ReplayConfig.Create(IDD_DLGREPLAYSHEET, &m_CMD_tab);
+	m_PlotSheet.Create(IDD_DLGPLOTSHEET, &m_CMD_tab);
 	//设定在Tab内显示的范围
 	CRect rc;
 	m_CMD_tab.GetClientRect(rc);
@@ -116,13 +120,19 @@ BOOL CCMD_dazaiDlg::OnInitDialog()
 	rc.right -= 0;
 	m_CommandSheet.MoveWindow(&rc);
 	m_RefreshSheet.MoveWindow(&rc);
+	m_ReplayConfig.MoveWindow(&rc);
+	m_PlotSheet.MoveWindow(&rc);
 
 	//把对话框对象指针保存起来
 	pDialog[0] = &m_CommandSheet;
 	pDialog[1] = &m_RefreshSheet;
+	pDialog[2] = &m_ReplayConfig;
+	pDialog[3] = &m_PlotSheet;
 	//显示初始页面
 	pDialog[0]->ShowWindow(SW_SHOW);
 	pDialog[1]->ShowWindow(SW_HIDE);
+	pDialog[2]->ShowWindow(SW_HIDE);
+	pDialog[3]->ShowWindow(SW_HIDE);
 	//保存当前选择
 	m_CurSelTab = 0;
 	
@@ -246,15 +256,33 @@ void CCMD_dazaiDlg::OnSize(UINT nType, int cx, int cy)
 	TabRect.top += 25;
 	TabRect.bottom -= 1;	m_CommandSheet.OnSize(nType, cx, cy);
 	m_RefreshSheet.OnSize(nType, cx, cy);
+	m_ReplayConfig.OnSize(nType, cx, cy);
+	m_PlotSheet.OnSize(nType, cx, cy);
 	switch (m_CMD_tab.GetCurSel())
 	{
 	case 0:
 		m_CommandSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_SHOWWINDOW);
 		m_RefreshSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_ReplayConfig.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_PlotSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
 		break;
 	case 1:
 		m_CommandSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
 		m_RefreshSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_SHOWWINDOW);
+		m_ReplayConfig.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_PlotSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		break;
+	case 2:
+		m_CommandSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_RefreshSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_ReplayConfig.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_SHOWWINDOW);
+		m_PlotSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		break;
+	case 3:
+		m_CommandSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_RefreshSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_ReplayConfig.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_HIDEWINDOW);
+		m_PlotSheet.SetWindowPos(NULL, TabRect.left, TabRect.top, TabRect.Width(), TabRect.Height(), SWP_SHOWWINDOW);
 		break;
 	default:
 		break;

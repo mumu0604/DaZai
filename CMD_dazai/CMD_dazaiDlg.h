@@ -6,6 +6,8 @@
 #include "afxcmn.h"
 #include "DlgCommandSheet.h"
 #include "DlgRefreshSheet.h"
+#include "ReplayConfig.h"
+#include "DlgPlotSheet.h"
 #include <list>
 using namespace std;
 
@@ -39,7 +41,9 @@ public:
 	int m_CurSelTab;
 	CDlgCommandSheet m_CommandSheet;
 	CDlgRefreshSheet m_RefreshSheet;
-	CDialog* pDialog[2];
+	CReplayConfig m_ReplayConfig;
+	CDlgPlotSheet m_PlotSheet;
+	CDialog* pDialog[4];
 	afx_msg void OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult);
 	void get_control_original_proportion();
 	typedef struct Rect

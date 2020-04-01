@@ -6,10 +6,13 @@
 #include "DlgCommandSheet.h"
 #include "afxdialogex.h"
 #include "DlgAddCommand.h"
+
 IMPLEMENT_DYNAMIC(CDlgCommandSheet, CDialogEx)
 
 CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CDlgCommandSheet::IDD, pParent)
+	, m_editCmdSendCnt(0)
+	, m_editCmdReactCnt(0)
 {
 	m_iRealCmdCnt = 0;
 }
@@ -22,7 +25,9 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_CONTROL, m_ListCtrlCommand);
-	DDX_Control(pDX, IDC_EDIT_CMD_OUTPUT, m_pEditCmdSend);
+	DDX_Control(pDX, IDC_EDIT_CMDSEND_OUTPUT, m_pEditCmdSend);
+	DDX_Text(pDX, IDC_EDIT_CMDSENDNUM, m_editCmdSendCnt);
+	DDX_Text(pDX, IDC_EDIT_CMDREACTNUM, m_editCmdReactCnt);
 }
 
 
@@ -40,6 +45,7 @@ BEGIN_MESSAGE_MAP(CDlgCommandSheet, CDialogEx)
 	ON_COMMAND(ID_CMD_DELETEALL, &CDlgCommandSheet::OnCmdDeleteall)
 	ON_BN_CLICKED(IDC_BUTTON_CMD_INPUT, &CDlgCommandSheet::OnBnClickedButtonCmdInput)
 	ON_BN_CLICKED(IDC_BUTTON_OUTPUT, &CDlgCommandSheet::OnBnClickedButtonOutput)
+	ON_BN_CLICKED(IDC_BUTTON_CMDSend, &CDlgCommandSheet::OnBnClickedButtonCmdsend)
 END_MESSAGE_MAP()
 
 
@@ -134,7 +140,17 @@ BOOL CDlgCommandSheet::OnInitDialog()
 		m_ListCtrlCommand.InsertColumn(i, &lvc[i]);
 	}
 	m_xml.Open("commands.xml");
+ //	m_ListCtrlCommand.InsertItem(0, _T(""));
+// 	m_ListCtrlCommand.InsertItem(1, _T("测试文字2"));
+// 	m_ListCtrlCommand.InsertItem(2, _T("测试文字3"));
+// 	m_ListCtrlCommand.InsertItem(0, _T("测试文字2"));
+// 	COLORREF color;
+// 	color = RGB(51, 153, 255);
+// 	m_ListCtrlCommand.SetColColor(0, color);
+// 	color = RGB(255, 0, 0);
+// 	m_ListCtrlCommand.SetColColor(1, color);
 
+	UpdateData(FALSE);
 	// TODO:  Add extra initialization here
 	get_control_original_proportion();
 	GetCmdInfo(m_pCmdInfo);
@@ -733,6 +749,7 @@ void CDlgCommandSheet::OnCmdSend()
 // 	reb = m_pInterface->SendCmd(m_COMportNum, 0, 32, (unsigned char *)m_CMDBuf, false);
 	if (reb)
 	{
+		m_editCmdSendCnt++;
 		ShowInfo("指令发送成功");
 	}
 	else
@@ -961,4 +978,23 @@ void CDlgCommandSheet::OnBnClickedButtonOutput()
 //	SaveToPLD(&pld_file);
 	pld_file.Close();
 	AfxMessageBox(_T("导出成功！"));
+}
+
+
+void CDlgCommandSheet::OnBnClickedButtonCmdsend()
+{
+	// TODO: Add your control notification handler code here
+	bool reb = false;
+// 	CMDSend();
+// 	bool state = m_pInterface->SendCmd(m_COMportNum, 0, m_CMD_length, (unsigned char *)m_CMDBuf, false);
+	if (reb)
+	{
+		m_editCmdSendCnt++;
+		
+		ShowInfo("指令发送成功");
+	}
+	else
+	{
+		ShowInfo("指令发送失败");
+	}
 }
