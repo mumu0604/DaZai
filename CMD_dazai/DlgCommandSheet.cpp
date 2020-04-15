@@ -6,6 +6,7 @@
 #include "DlgCommandSheet.h"
 #include "afxdialogex.h"
 #include "DlgAddCommand.h"
+#include "TeleDisplay.h"
 
 IMPLEMENT_DYNAMIC(CDlgCommandSheet, CDialogEx)
 
@@ -15,6 +16,13 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	, m_editCmdReactCnt(0)
 {
 	m_iRealCmdCnt = 0;
+	m_mappackType["添加业务任务"] = 0x40;
+	m_mappackType["添加业务指令"] = 0x41;
+	m_mappackType["添加重构任务"] = 0x43;
+	m_mappackType["添加测试任务"] = 0x47;
+	m_mappackType["删除业务任务"] = 0x80;
+	m_mappackType["删除重构任务"] = 0x83;
+	m_mappackType["删除测试任务"] = 0x87;
 }
 
 CDlgCommandSheet::~CDlgCommandSheet()
@@ -28,6 +36,8 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_CMDSEND_OUTPUT, m_pEditCmdSend);
 	DDX_Text(pDX, IDC_EDIT_CMDSENDNUM, m_editCmdSendCnt);
 	DDX_Text(pDX, IDC_EDIT_CMDREACTNUM, m_editCmdReactCnt);
+	DDX_Control(pDX, IDC_LIST_TELEOUTPUT, m_ListTeleOutput);
+	DDX_Control(pDX, IDC_COMBO_PACKTYPE, m_ComboBoxPackType);
 }
 
 
@@ -102,6 +112,7 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	CDialogEx::OnInitDialog();
 	
 	// TODO:  Add extra initialization here
+	m_pInterface = new CInterface;
 	LONG lStyle;
 	lStyle = GetWindowLong(m_ListCtrlCommand.m_hWnd, GWL_STYLE);
 	lStyle &= ~LVS_TYPEMASK;
@@ -120,13 +131,11 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	}LIST_HEAD;
 
 	LIST_HEAD head[] = {
-		{ "序号", 30 },
-		{ "分系统", 30 },
-		{ "总线", 40 },
+		{ "序号", 60 },
 		{ "绝对时间", 240 },
 		{ "指令功能描述", 180 },
-		{ "指令码", 50 },
-		{ "参数长度", 60 },
+		{ "指令码", 60 },
+		{ "参数长度", 80 },
 		{ "参数", 660 }
 	};
 	LV_COLUMN lvc[sizeof(head) / sizeof(LIST_HEAD)];
@@ -139,20 +148,22 @@ BOOL CDlgCommandSheet::OnInitDialog()
 		lvc[i].cx = head[i].width;
 		m_ListCtrlCommand.InsertColumn(i, &lvc[i]);
 	}
-	m_xml.Open("commands.xml");
  //	m_ListCtrlCommand.InsertItem(0, _T(""));
 // 	m_ListCtrlCommand.InsertItem(1, _T("测试文字2"));
 // 	m_ListCtrlCommand.InsertItem(2, _T("测试文字3"));
 // 	m_ListCtrlCommand.InsertItem(0, _T("测试文字2"));
 // 	COLORREF color;
 // 	color = RGB(51, 153, 255);
-// 	m_ListCtrlCommand.SetColColor(0, color);
+// 	m_ListCtrlCommand.SetColColor(0, color);
 // 	color = RGB(255, 0, 0);
-// 	m_ListCtrlCommand.SetColColor(1, color);
-
-	UpdateData(FALSE);
-	// TODO:  Add extra initialization here
+// 	m_ListCtrlCommand.SetColColor(1, color);
+//	UpdateData(FALSE);
+	
+	m_CTeleDisplay.Open(&m_ListTeleOutput,TELECOMMANDSHEET);
 	get_control_original_proportion();
+	m_xml.Open("monitor.xml");
+	GetMonitorxmlInfo(m_pMonitorInfo);
+	m_xml.Open("commands.xml");
 	GetCmdInfo(m_pCmdInfo);
 	GetLocalTime(&m_GPSTimeNowday);
 	SetTimer(0, 500, NULL);
@@ -160,6 +171,17 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	m_menu.LoadMenu(IDR_MENUCMD);
 	CMenu *pMenu;
 	pMenu = m_menu.GetSubMenu(0);
+	map<CString, int>::iterator itr = m_mappackType.begin();
+	while (itr != m_mappackType.end())
+	{
+		m_ComboBoxPackType.AddString(itr->first);
+		//////////////////////////////////////////////////////////////////////////
+		itr++;
+	}
+	m_ComboBoxPackType.SetCurSel(0);
+	int a = m_ComboBoxPackType.SetItemHeight(-1, 25);
+
+	m_ComboBoxPackType.GetItemHeight(-1);
 
 
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -284,14 +306,14 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 	}
 	m_ListCtrlCommand.SetItemData(index, (DWORD)pAddedCmd);
 
-	m_ListCtrlCommand.SetItemText(index, COL_DEV, strDev);
+//	m_ListCtrlCommand.SetItemText(index, COL_DEV, strDev);
 
-	if (pAddedCmd->bus_flag){
-		m_ListCtrlCommand.SetItemText(index, COL_BUS, "B");
-	}
-	else{
-		m_ListCtrlCommand.SetItemText(index, COL_BUS, "A");
-	}
+// 	if (pAddedCmd->bus_flag){
+// 		m_ListCtrlCommand.SetItemText(index, COL_BUS, "B");
+// 	}
+// 	else{
+// 		m_ListCtrlCommand.SetItemText(index, COL_BUS, "A");
+// 	}
 	if (pAddedCmd->immediate_flag){
 		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, "立即令");
 	}
@@ -309,7 +331,7 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 
 	strBuf = "";
 	for (j = 0; j < pCmdInfo->arg_num; j++){
-		ExtractArgValue(temp, pAddedCmd->args, pCmdInfo->bit_start[j], pCmdInfo->arg_length[j]);
+		m_pInterface->ExtractArgValue(temp, pAddedCmd->args, pCmdInfo->bit_start[j], pCmdInfo->arg_length[j]);
 		for (k = 0; k < pCmdInfo->arg_length[j] / 8; k++){
 			strBuf1.Format("%02X", temp[k]);
 			strBuf += strBuf1;
@@ -330,42 +352,10 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 
 	lvc.pszText = _T("绝对时间");
 	m_ListCtrlCommand.SetColumn(COL_ABS_TIME, &lvc);
-	lvc.pszText = _T("分系统");
-	m_ListCtrlCommand.SetColumn(COL_DEV, &lvc);
 	//	m_ListCtrlCommand.SetItemState(index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 	return;
 }
-void CDlgCommandSheet::ExtractArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length)
-{
-	int i;
 
-	int byteStart = bitStart / 8;
-
-	bitStart &= 7;
-
-	if (!bitStart){
-		for (i = 0; i < length / 8; i++){
-			pDst[i] = pSrc[i + byteStart];
-		}
-		length &= 7;
-		if (length){
-			pDst[i] = pSrc[i + byteStart] & (0xFF << (8 - length));
-		}
-		return;
-	}
-
-	for (i = 0; i < length / 8; i++){
-		pDst[i] = (pSrc[i + byteStart] << bitStart) | pSrc[i + byteStart + 1] >> (8 - bitStart);
-	}
-	length &= 7;
-	if (length){
-		pDst[i] = (pSrc[i + byteStart] << bitStart);
-		if (length + bitStart > 8){
-			pDst[i] |= pSrc[i + byteStart + 1] >> (8 - bitStart);
-		}
-		pDst[i] &= (0xFF << (8 - length));
-	}
-}
 xmlXPathObjectPtr CDlgCommandSheet::LocateXPath(char xpath_expr[])
 {
 	xmlXPathObjectPtr xpathObj = NULL;
@@ -380,6 +370,19 @@ xmlXPathObjectPtr CDlgCommandSheet::LocateXPath(char xpath_expr[])
 	}
 	return NULL;
 
+}
+xmlXPathObjectPtr CDlgCommandSheet::LocateCommand(unsigned char dev_id, unsigned char cmd_id)
+{
+	char xpath_expr[200];
+	xmlXPathObjectPtr xpathObj = NULL;
+
+	if (cmd_id){
+		sprintf(xpath_expr, "/CommandSet/Category/Device[translate(@DeviceID,'abcdef','ABCDEF')='%02X']/parent::*/Command[translate(@CommandCode,'abcdef','ABCDEF')='%02X']\0", dev_id, cmd_id);
+	}
+	else{
+		sprintf(xpath_expr, "/CommandSet/Category/Device[translate(@DeviceID,'abcdef','ABCDEF')='%02X']/parent::*/Command[@CommandCode]\0", dev_id);
+	}
+	return LocateXPath(xpath_expr);
 }
 void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[256])
 {
@@ -488,7 +491,7 @@ void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[256])
 							temp[j] <<= (8 - (pCmdInfo->arg_length[idx] & 0x7));
 						}
 					}
-					InsertArgValue(pCmdInfo->init_value, temp, pCmdInfo->bit_start[idx], pCmdInfo->arg_length[idx]);
+					m_pInterface->InsertArgValue(pCmdInfo->init_value, temp, pCmdInfo->bit_start[idx], pCmdInfo->arg_length[idx]);
 					if (pCmdInfo->input_type[idx] == 0){
 						pCmdInfo->input_ctrl_index[idx] = combo_index;
 						combo_index++;
@@ -517,63 +520,180 @@ void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[256])
 // 		}
 // 	}
 }
-void CDlgCommandSheet::InsertArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length)
+void CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
 {
-	int byteStart, bitEnd;
+	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* 256);
+	xmlXPathObjectPtr xpathObj;
+	char xpath_expr[200];
+	int i, j;
+	xmlNode *pNode, *pNodeSub;
+	xmlChar *xmlRtn;
+	char *endptr;
+	int idx;
+	int length;
+	CmdInfo *pCmdInfo;
+	CString strTemp;
+	unsigned char temp[MAX_ARG_LENGTH];
+	unsigned char edit_index, combo_index;
+	int sumGB2312;
+	int combxCntinArg = 0;
+	sprintf(xpath_expr, "/CommandSet/Category/Command");
+	xpathObj = LocateXPath(xpath_expr);//查询节点
+	CString str;
+	if (xpathObj){
+		m_MonitorCmdNum = xpathObj->nodesetval->nodeNr;
+		for (i = 0; i < xpathObj->nodesetval->nodeNr; i++){
+			pNode = xpathObj->nodesetval->nodeTab[i];
+			xmlRtn = xmlGetProp(pNode, BAD_CAST("CommandCode"));
+			idx = strtol((char *)xmlRtn, &endptr, 16);
+			idx &= 0xFF;
+			xmlFree(xmlRtn);
+			pCmdInfo = (CmdInfo *)malloc(sizeof(CmdInfo));
+			m_pCmdInfo[idx] = pCmdInfo;
+			memset(pCmdInfo, 0, sizeof(CmdInfo));
+			xmlRtn = xmlGetProp(pNode, BAD_CAST("ArgumentByteLength"));
+			pCmdInfo->arg_byte_num = strtol((char *)xmlRtn, &endptr, 10);
+			xmlFree(xmlRtn);
+			xmlRtn = CXML::xmlGetPropGBK(pNode, BAD_CAST("CommandName"));
+			length = strlen((char *)xmlRtn);
+			if (length > MAX_NAME_LENGTH){
+				length = MAX_NAME_LENGTH - 1;
+			}
+			memcpy(pCmdInfo->cmd_name, xmlRtn, length);
+			sumGB2312 = 0;
+			for (j = 0; j < length; j++){
+				if (pCmdInfo->cmd_name[j] & 0x80){
+					sumGB2312++;
+				}
+			}
+			pCmdInfo->cmd_name[length] = '\0';
+			if (sumGB2312 & 0x01){
+				pCmdInfo->cmd_name[length - 1] = '\0';
+			}
+			xmlFree(xmlRtn);
+			pNode = pNode->xmlChildrenNode;
+			idx = 0;
+			edit_index = 1;
+			combo_index = 0;
+			int cnt = 0;
+			while (pNode){
+				if (idx > MAX_ARG_NUM){
+					break;
+				}
+				cnt++;
+				if (!xmlStrcmp(pNode->name, BAD_CAST("Arg"))){//确定节点是否为Arg
+					pCmdInfo->input_type[idx] = 1;
+					pNodeSub = pNode->xmlChildrenNode;
+					combxCntinArg = 0;
+					while (pNodeSub){
+						if (!xmlStrcmp(pNodeSub->name, BAD_CAST("ArgValue"))){
+							pCmdInfo->input_type[idx] = 0;
+							xmlRtn = CXML::xmlGetPropGBK(pNodeSub, BAD_CAST("ArgumentValueName"));
+							length = strlen((char *)xmlRtn);
+							if (length > MAX_NAME_LENGTH){
+								length = MAX_NAME_LENGTH - 1;
+							}
+							memcpy(pCmdInfo->Arg_CombxName[idx][combxCntinArg], xmlRtn, length);
+							sumGB2312 = 0;
+							for (j = 0; j < length; j++){
+								if (pCmdInfo->Arg_CombxName[idx][combxCntinArg][j] & 0x80){
+									sumGB2312++;
+								}
+							}
+							pCmdInfo->Arg_CombxName[idx][combxCntinArg][length] = '\0';
+							if (sumGB2312 & 0x01){
+								pCmdInfo->Arg_CombxName[idx][combxCntinArg][length - 1] = '\0';
+							}
+							xmlFree(xmlRtn);
+							xmlRtn = xmlNodeGetContent(pNodeSub);
+							str = xmlRtn;
 
-	unsigned char mask;
-	int i;
+							pCmdInfo->Arg_CombxCode[idx][combxCntinArg] = strtol(str.Left(2), &endptr, 16);
+							combxCntinArg++;
 
-	if (length <= 0){
-		return;
-	}
+						}
+						pCmdInfo->combcntNum[idx] = combxCntinArg;
+						pNodeSub = pNodeSub->next;
+					}
+					xmlRtn = xmlGetProp(pNode, BAD_CAST("datatype"));
+					if (xmlRtn)
+					{
+						str = xmlRtn;
+						pCmdInfo->datatype[idx] = strtol(str.Left(2), &endptr, 16);
+						xmlFree(xmlRtn);
+					}
 
-	byteStart = bitStart >> 3;
-
-
-	bitStart = bitStart & 0x7;
-	bitEnd = bitStart + length;
-
-	if (!bitStart){
-		for (i = 0; i < length / 8; i++){
-			pDst[i + byteStart] = pSrc[i];
+					xmlRtn = CXML::xmlGetPropGBK(pNode, BAD_CAST("cal"));
+					if (xmlRtn)
+					{
+						length = strlen((char *)xmlRtn);
+						if (length > MAX_NAME_LENGTH){
+							length = MAX_NAME_LENGTH - 1;
+						}
+						memcpy(pCmdInfo->cal[idx], xmlRtn, length);
+					}
+					xmlRtn = xmlGetProp(pNode, BAD_CAST("bitStart"));
+					pCmdInfo->bit_start[idx] = atoi((char *)xmlRtn);
+					xmlFree(xmlRtn);
+					xmlRtn = xmlGetProp(pNode, BAD_CAST("bitLength"));
+					pCmdInfo->arg_length[idx] = atoi((char *)xmlRtn);
+					xmlFree(xmlRtn);
+					xmlRtn = CXML::xmlGetPropGBK(pNode, BAD_CAST("ArgumentName"));
+					length = strlen((char *)xmlRtn);
+					if (length > MAX_NAME_LENGTH){
+						length = MAX_NAME_LENGTH - 1;
+					}
+					memcpy(pCmdInfo->arg_name[idx], xmlRtn, length);
+					sumGB2312 = 0;
+					for (j = 0; j < length; j++){
+						if (pCmdInfo->arg_name[idx][j] & 0x80){
+							sumGB2312++;
+						}
+					}
+					pCmdInfo->arg_name[idx][length] = '\0';
+					if (sumGB2312 & 0x01){
+						pCmdInfo->arg_name[idx][length - 1] = '\0';
+					}
+					xmlFree(xmlRtn);
+					if (pCmdInfo->bit_start[idx] + pCmdInfo->arg_length[idx] > MAX_ARG_LENGTH * 8){
+						break;
+					}
+					//					pCmdInfo->arg_byte_num += pCmdInfo->arg_length[idx];
+					xmlRtn = xmlGetProp(pNode, BAD_CAST("initValue"));
+					strTemp = xmlRtn;
+					xmlFree(xmlRtn);
+					strTemp.GetBufferSetLength((pCmdInfo->arg_length[idx] + 7) / 8 * 2);
+					for (j = 0; j < pCmdInfo->arg_length[idx] / 8; j++){
+						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
+					}
+					if (pCmdInfo->arg_length[idx] & 0x7){
+						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
+						if (pCmdInfo->input_type[idx] == 0){
+							temp[j] <<= (8 - (pCmdInfo->arg_length[idx] & 0x7));
+						}
+					}
+					m_pInterface->InsertArgValue(pCmdInfo->init_value, temp, pCmdInfo->bit_start[idx], pCmdInfo->arg_length[idx]);
+					if (pCmdInfo->input_type[idx] == 0){
+						pCmdInfo->input_ctrl_index[idx] = combo_index;
+						combo_index++;
+						edit_index += 2;
+					}
+					else{
+						pCmdInfo->input_ctrl_index[idx] = edit_index;
+						edit_index += 3;
+					}
+					idx++;
+				}
+				pNode = pNode->next;
+			}
+			pCmdInfo->arg_num = idx;
 		}
-		length &= 7;
-		if (length){
-			mask = 0xFF << (8 - length);
-			pDst[i + byteStart] &= ~mask;
-			pDst[i + byteStart] |= pSrc[i] & mask;
-		}
-		return;
+		xmlXPathFreeObject(xpathObj);
 	}
 
-	mask = (0xFF >> bitStart);
-
-	if (bitEnd < 8){
-		mask &= 0xFF << (8 - bitEnd);
-		pDst[byteStart] &= ~mask;
-		pDst[byteStart] |= (pSrc[0] >> bitStart) & mask;
-		return;
-	}
-
-	pDst[byteStart] &= ~mask;
-	pDst[byteStart] |= (pSrc[0] >> bitStart) & mask;
-
-	for (i = 1; i < bitEnd / 8; i++){
-		pDst[i + byteStart] = (pSrc[i] >> bitStart) | (pSrc[i - 1] << (8 - bitStart));
-	}
-
-	bitEnd &= 7;
-	if (bitEnd){
-		mask = 0xFF << (8 - bitEnd);
-		pDst[i + byteStart] &= ~mask;
-		if (bitEnd > bitStart){
-			pDst[i + byteStart] |= (pSrc[i] >> bitStart) & mask;
-		}
-		pDst[i + byteStart] |= (pSrc[i - 1] << (8 - bitStart)) & mask;
-	}
 }
-UINT ReceiveThread(void *param)
+
+UINT CDlgCommandSheet::ReceiveThread(void *param)
 {
 	CDlgCommandSheet *dlgCommandSheet = (CDlgCommandSheet*)param;
 	CDlgCANCOFIG *dlgCan = &(dlgCommandSheet->dlgCanConfig);
@@ -852,14 +972,10 @@ void CDlgCommandSheet::OnCmdInsert()
 	unsigned int time;
 	CMD_WN *pCmd, *pCmd1;
 	pCmd = (CMD_WN *)m_ListCtrlCommand.GetItemData(index);
-	cmd.dev_id = pCmd->dev_id;
 
 
 	for (int i = index - 1; i >= 0; i--){
-		pCmd1 = (CMD_WN *)m_ListCtrlCommand.GetItemData(i);
-		if (pCmd1->dev_id != cmd.dev_id){
-			continue;
-		}
+		pCmd1 = (CMD_WN *)m_ListCtrlCommand.GetItemData(i);		
 		if (pCmd1->immediate_flag){
 			continue;
 		}

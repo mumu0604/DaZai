@@ -2,6 +2,7 @@
 #include "ListCtrlCl.h"
 #include <list>
 #include "afxcmn.h"
+#include "TeleDisplay.h"
 using namespace std;
 // CDlgRefreshSheet dialog
 
@@ -33,4 +34,5 @@ public:
 	list<control*> m_con_list;
 	virtual BOOL OnInitDialog();
 	CListCtrlCl m_ListRefresh;
+	CTeleDisplay m_CTeleDisplay;
 };

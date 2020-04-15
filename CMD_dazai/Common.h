@@ -35,8 +35,6 @@ enum
 enum
 {
 	COL_SEQ = 0,
-	COL_DEV,
-	COL_BUS,
 	COL_ABS_TIME,
 	COL_DESC,
 	COL_CODE,
@@ -54,7 +52,9 @@ enum
 
 #define CAN_BUS_A	0x00
 #define CAN_BUS_B	0x30
-
+#define TELECOMMANDSHEET 0
+#define TELEREFRESHSHEET 1
+#define TELEREPALYCONFIG 2
 
 
 typedef struct
@@ -86,6 +86,16 @@ typedef struct
 	unsigned char arg_num;
 	unsigned char arg_byte_num;
 }CmdInfo;
+typedef struct 
+{
+	char type;
+	int clientCode;
+	char taskCode;
+	int starttime;
+	unsigned short timelength;
+	__int64 offsettime;
+	unsigned short dataaddr;
+}InjectionInfo;
 typedef struct
 {
 	int hour;

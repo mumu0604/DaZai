@@ -96,9 +96,6 @@ BOOL CDlgAddCommand::OnInitDialog()
 	UpdateData(FALSE);
 	xmlXPathObjectPtr xpathObj;
 
-	//	xpathObj = m_xml.GetNodesByXPath(BAD_CAST("//Command[@name]"));
-//	xpathObj = m_pDlg->LocateCommand(0x33, 0);
-
 
 	LONG lStyle = m_ListAddCMD.SendMessage
 		(LVM_GETEXTENDEDLISTVIEWSTYLE);
@@ -116,7 +113,7 @@ BOOL CDlgAddCommand::OnInitDialog()
 	lvc.pszText = (char *)"ЦёБо";
 	lvc.cx = 200;
 	m_ListAddCMD.InsertColumn(0, &lvc);
-	xpathObj = LocateCommand(0x33, 0);
+	xpathObj = m_pDlg->LocateCommand(0x33, 0);
 	int iCmdIdx = 0;
 	xmlChar *xmlRtn;
 	char *endptr;
@@ -167,34 +164,7 @@ void CDlgAddCommand::OnNMDblclkListAddcmd(NMHDR *pNMHDR, LRESULT *pResult)
 	}
 	*pResult = 0;
 }
-xmlXPathObjectPtr CDlgAddCommand::LocateXPath(char xpath_expr[])
-{
-	xmlXPathObjectPtr xpathObj = NULL;
-	xpathObj = m_xml.GetNodesByXPath(BAD_CAST(xpath_expr));
-	if (xpathObj){
-		if (xpathObj->nodesetval){
-			if (xpathObj->nodesetval->nodeNr > 0){
-				return xpathObj;
-			}
-		}
-		xmlXPathFreeObject(xpathObj);
-	}
-	return NULL;
 
-}
-xmlXPathObjectPtr CDlgAddCommand::LocateCommand(unsigned char dev_id, unsigned char cmd_id)
-{
-	char xpath_expr[200];
-	xmlXPathObjectPtr xpathObj = NULL;
-
-	if (cmd_id){
-		sprintf(xpath_expr, "/CommandSet/Category/Device[translate(@DeviceID,'abcdef','ABCDEF')='%02X']/parent::*/Command[translate(@CommandCode,'abcdef','ABCDEF')='%02X']\0", dev_id, cmd_id);
-	}
-	else{
-		sprintf(xpath_expr, "/CommandSet/Category/Device[translate(@DeviceID,'abcdef','ABCDEF')='%02X']/parent::*/Command[@CommandCode]\0", dev_id);
-	}
-	return LocateXPath(xpath_expr);
-}
 void CDlgAddCommand::SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue)
 {
 
@@ -211,7 +181,7 @@ void CDlgAddCommand::SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue
 	}
 
 	for (i = 0; i < pCmdInfo->arg_num; i++){
-		m_pDlg->ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
+		m_pDlg->m_pInterface->ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 		strArg = "";
 		for (j = 0; j < pCmdInfo->arg_length[i] / 8; j++){
 			strBuf.Format("%02X", temp[j]);
@@ -483,7 +453,7 @@ void CDlgAddCommand::OnBnClickedOk()
 				temp[j] <<= (8 - (pCmdInfo->arg_length[i] & 0x7));
 			}
 		}
-		m_pDlg->InsertArgValue(m_pCmd_WN->args, temp, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
+		m_pDlg->m_pInterface->InsertArgValue(m_pCmd_WN->args, temp, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 	}
 	CDialogEx::OnOK();
 }

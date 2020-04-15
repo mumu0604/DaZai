@@ -7,7 +7,8 @@
 #include "DlgCANCOFIG.h"
 #include "ListCtrlCl.h"
 #include "afxwin.h"
-
+#include "TeleDisplay.h"
+#include "Interface.h"
 using namespace std;
 // CDlgCommandSheet dialog
 
@@ -39,15 +40,20 @@ public:
 	list<control*> m_con_list;
 	CDlgCANCOFIG dlgCanConfig;
 	virtual BOOL OnInitDialog();
-	CListCtrlCl m_ListCtrlCommand;
+	CListCtrl m_ListCtrlCommand;
 	CXML m_xml;
+	CXML m_xmlMonitor;
 	int m_iRealCmdCnt;
 	CMD_WN m_cmdAddInfo[MAXCOMMAND];
 	CmdInfo *m_pCmdInfo[256];
-	void ExtractArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
+	CmdInfo *m_pMonitorInfo[256];
+	map<CString, int> m_mappackType;
+//	void ExtractArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
 	xmlXPathObjectPtr LocateXPath(char xpath_expr[]);
+	xmlXPathObjectPtr LocateCommand(unsigned char dev_id, unsigned char cmd_id);
 	void GetCmdInfo(CmdInfo *m_pCmdInfo[256]);
-	void InsertArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
+	void GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256]);
+//	void InsertArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
 	afx_msg void OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedButtonCanpara();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -73,4 +79,10 @@ public:
 	afx_msg void OnBnClickedButtonCmdsend();
 	int m_editCmdSendCnt;
 	int m_editCmdReactCnt;
+	CListCtrlCl m_ListTeleOutput;
+	static UINT ReceiveThread(void *param);
+	int m_MonitorCmdNum;
+	CTeleDisplay m_CTeleDisplay;
+	CInterface *m_pInterface;
+	CComboBox m_ComboBoxPackType;
 };

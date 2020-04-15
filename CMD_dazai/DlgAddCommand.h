@@ -1,6 +1,5 @@
 #pragma once
 #include <list>
-#include "DlgAddCommand.h"
 #include "DlgCommandSheet.h"
 #include "Common.h"
 #include "afxcmn.h"
@@ -12,7 +11,7 @@
 #include <vector>
 #include "afxdtctl.h"
 using namespace std;
-
+//class CDlgCommandSheet;
 // CDlgAddCommand dialog
 enum{
 	CANVAS_LEFTTOPx = 250,
@@ -63,8 +62,6 @@ public:
 
 //	CDlgCommandSheet *m_pDlg;
 	afx_msg void OnNMDblclkListAddcmd(NMHDR *pNMHDR, LRESULT *pResult);
-	xmlXPathObjectPtr LocateXPath(char xpath_expr[]);
-	xmlXPathObjectPtr LocateCommand(unsigned char dev_id, unsigned char cmd_id);
 	void SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue);
 	void DeleteEditAndCombo();
 	CDynComboBox* CreateComboBox(int id, int width, xmlNodePtr pNode);
