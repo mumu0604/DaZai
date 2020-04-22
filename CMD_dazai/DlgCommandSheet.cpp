@@ -23,6 +23,8 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	m_mappackType["删除业务任务"] = 0x80;
 	m_mappackType["删除重构任务"] = 0x83;
 	m_mappackType["删除测试任务"] = 0x87;
+	m_interface = (CInterface *)malloc(sizeof(CInterface));
+
 }
 
 CDlgCommandSheet::~CDlgCommandSheet()
@@ -38,6 +40,8 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_CMDREACTNUM, m_editCmdReactCnt);
 	DDX_Control(pDX, IDC_LIST_TELEOUTPUT, m_ListTeleOutput);
 	DDX_Control(pDX, IDC_COMBO_PACKTYPE, m_ComboBoxPackType);
+	DDX_Control(pDX, IDC_COMBO_CANCMD, m_ComboCancmd);
+	DDX_Control(pDX, IDC_COMBO_LVDSCMD, m_ComboLVDScmd);
 }
 
 
@@ -162,7 +166,12 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	m_CTeleDisplay.Open(&m_ListTeleOutput,TELECOMMANDSHEET);
 	get_control_original_proportion();
 	m_xml.Open("monitor.xml");
-	GetMonitorxmlInfo(m_pMonitorInfo);
+	m_MonitorCmdNum=GetMonitorxmlInfo(m_pMonitorInfo);
+	m_xml.Open("commandsCan.xml");
+	m_CANcmdNum = GetMonitorxmlInfo(m_pCANcmdInfo);
+	m_xml.Open("commands_LVDS.xml");
+	m_LVDScmdNum = GetMonitorxmlInfo(m_pLVDScmdInfo);
+
 	m_xml.Open("commands.xml");
 	GetCmdInfo(m_pCmdInfo);
 	GetLocalTime(&m_GPSTimeNowday);
@@ -177,11 +186,24 @@ BOOL CDlgCommandSheet::OnInitDialog()
 		m_ComboBoxPackType.AddString(itr->first);
 		//////////////////////////////////////////////////////////////////////////
 		itr++;
+	}	
+	for (i = 0; i < m_CANcmdNum; i++)
+	{
+		CString str(m_pCANcmdInfo[i]->cmd_name);
+		m_ComboCancmd.AddString(str);
 	}
-	m_ComboBoxPackType.SetCurSel(0);
-	int a = m_ComboBoxPackType.SetItemHeight(-1, 25);
+	for (i = 0; i < m_LVDScmdNum; i++)
+	{
+		CString str(m_pLVDScmdInfo[i]->cmd_name);
+		m_ComboLVDScmd.AddString(str);
+	}
 
-	m_ComboBoxPackType.GetItemHeight(-1);
+	m_ComboBoxPackType.SetCurSel(0);
+	m_ComboCancmd.SetCurSel(0);
+	m_ComboLVDScmd.SetCurSel(0);
+	m_ComboBoxPackType.SetItemHeight(-1, 25);
+	m_ComboCancmd.SetItemHeight(-1, 25);
+	m_ComboLVDScmd.SetItemHeight(-1, 25);
 
 
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -520,7 +542,7 @@ void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[256])
 // 		}
 // 	}
 }
-void CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
+int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
 {
 	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* 256);
 	xmlXPathObjectPtr xpathObj;
@@ -530,6 +552,7 @@ void CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
 	xmlChar *xmlRtn;
 	char *endptr;
 	int idx;
+	int xmlCMDnum = 0;
 	int length;
 	CmdInfo *pCmdInfo;
 	CString strTemp;
@@ -541,7 +564,7 @@ void CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
 	xpathObj = LocateXPath(xpath_expr);//查询节点
 	CString str;
 	if (xpathObj){
-		m_MonitorCmdNum = xpathObj->nodesetval->nodeNr;
+		xmlCMDnum = xpathObj->nodesetval->nodeNr;
 		for (i = 0; i < xpathObj->nodesetval->nodeNr; i++){
 			pNode = xpathObj->nodesetval->nodeTab[i];
 			xmlRtn = xmlGetProp(pNode, BAD_CAST("CommandCode"));
@@ -690,7 +713,7 @@ void CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
 		}
 		xmlXPathFreeObject(xpathObj);
 	}
-
+	return xmlCMDnum;
 }
 
 UINT CDlgCommandSheet::ReceiveThread(void *param)
@@ -798,10 +821,11 @@ void CDlgCommandSheet::OnBnClickedButtonCanpara()
 
 	if (dlgCanConfig.DoModal() == IDOK)
 	{
-		if (dlgCanConfig.m_connect_CAN)
-		{
-			AfxBeginThread(ReceiveThread, this);
-		}
+		m_interface->m_connect_CAN = dlgCanConfig.m_connect_CAN;
+		m_interface->m_connect_LVDS = dlgCanConfig.m_connect_LVDS;
+		m_interface->m_connect_RS422 = dlgCanConfig.m_connect_RS422;
+		m_interface->m_cannum = dlgCanConfig.m_cannum;
+	
 
 	}
 }
@@ -822,7 +846,20 @@ void CDlgCommandSheet::SetCurrentTimer()
 void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: Add your message handler code here and/or call default
-	SetCurrentTimer();
+	
+	switch (nIDEvent)
+	{
+	case 0:	
+		SetCurrentTimer();
+		break;
+	case 1:
+		m_interface->m_canteleframesend = true;
+		break;
+	case 2:
+		m_interface->m_lvdseleframesend = true;
+	default:
+		break;
+	}
 	CDialogEx::OnTimer(nIDEvent);
 }
 
