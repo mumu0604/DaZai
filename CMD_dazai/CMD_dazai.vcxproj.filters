@@ -78,6 +78,9 @@
     <ClInclude Include="TeleDisplay.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Ctelemetry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CMD_dazai.cpp">
@@ -123,6 +126,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TeleDisplay.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Ctelemetry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

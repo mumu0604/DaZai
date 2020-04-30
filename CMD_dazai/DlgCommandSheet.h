@@ -9,6 +9,7 @@
 #include "afxwin.h"
 #include "TeleDisplay.h"
 #include "Interface.h"
+#include "Ctelemetry.h"
 using namespace std;
 // CDlgCommandSheet dialog
 
@@ -50,7 +51,7 @@ public:
 	CmdInfo *m_pCANcmdInfo[256];
 	CmdInfo *m_pLVDScmdInfo[256];
 	map<CString, int> m_mappackType;
-//	void ExtractArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
+
 	xmlXPathObjectPtr LocateXPath(char xpath_expr[]);
 	xmlXPathObjectPtr LocateCommand(unsigned char dev_id, unsigned char cmd_id);
 	void GetCmdInfo(CmdInfo *m_pCmdInfo[256]);
@@ -60,6 +61,10 @@ public:
 	afx_msg void OnBnClickedButtonCanpara();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	void SetCurrentTimer();
+	bool GetCMDlist(CMDbuf *cmdbuf);
+	bool GetCMDsingle(CMDbuf *cmdbuf);
+	void Getinjectionpara(InjectionInfo *Injectionpara);
+	int getcmdinjectiondata(CMDbuf cmdbuf, char *InjectionBuffer, char *dataFramBuffer);
 	SYSTEMTIME m_GPSTimeNowday;
 	CMenu m_menu;
 	unsigned char m_bus_flag;
@@ -87,11 +92,42 @@ public:
 	int m_CANcmdNum;
 	int m_LVDScmdNum;
 	CTeleDisplay m_CTeleDisplay;
+	Ctelemetry m_Ctelemetry;
 	CInterface *m_pInterface;
 	CComboBox m_ComboBoxPackType;
 	CComboBox m_ComboCancmd;
 	CComboBox m_ComboLVDScmd;
-	CInterface *m_interface;
 // 	map<CString, int>m_mapComboCancmd;
 // 	map<CString, int>m_mapComboLVDScmd;
+	afx_msg void OnBnClickedButtonCansend();
+	afx_msg void OnBnClickedButtonCaninjectfile();
+	afx_msg void OnBnClickedButtonCaninfile2();
+	CString m_editCANinjectdir;
+	CString m_editLVDSinjectdir;
+	BOOL m_checkCANinjection;
+	BOOL m_checkCANimmedieate;
+	BOOL m_checkLVDSinjection;
+	BOOL m_checkLVDSimmedieate;
+	afx_msg void OnBnClickedButtonlvdsinjectsend();
+	afx_msg void OnBnClickedButtonLvdsinfile();
+	afx_msg void OnBnClickedCheckCaninjection();
+	afx_msg void OnBnClickedCheckCanimmedieate();
+	afx_msg void OnBnClickedCheckLvdsinjection();
+	afx_msg void OnBnClickedCheckLvdsimmedieate();
+	int m_EditclientCode;
+	int m_EdittaskCode;
+	int m_Editstarttime;
+	short m_Edittimelength;
+	short m_Editoffsettime0;
+	short m_Editoffsettime1;
+	short m_Editoffsettime2;
+	short m_Editoffsettime3;
+	short m_Editdataaddr;
+	BOOL m_check_istaskdata;
+	afx_msg void OnBnClickedCheckIstaskdata();
+	afx_msg void OnBnClickedButtonTaskdatadir();
+	CString m_EditTaskInjectionDatafiel;
+	BOOL m_checkSinglecmdlvds;
+	BOOL m_checkSinglecmdcan;
+	afx_msg void OnBnClickedButtonSingelcmdsedn();
 };

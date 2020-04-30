@@ -181,7 +181,7 @@ void CDlgAddCommand::SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue
 	}
 
 	for (i = 0; i < pCmdInfo->arg_num; i++){
-		m_pDlg->m_pInterface->ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
+		m_pDlg->m_Ctelemetry.ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 		strArg = "";
 		for (j = 0; j < pCmdInfo->arg_length[i] / 8; j++){
 			strBuf.Format("%02X", temp[j]);
@@ -453,7 +453,7 @@ void CDlgAddCommand::OnBnClickedOk()
 				temp[j] <<= (8 - (pCmdInfo->arg_length[i] & 0x7));
 			}
 		}
-		m_pDlg->m_pInterface->InsertArgValue(m_pCmd_WN->args, temp, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
+		m_pDlg->m_Ctelemetry.InsertArgValue(m_pCmd_WN->args, temp, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 	}
 	CDialogEx::OnOK();
 }

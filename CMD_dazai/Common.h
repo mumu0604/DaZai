@@ -44,7 +44,7 @@ enum
 #define MAX_ARG_NUM 256
 #define MAX_ARG_LENGTH	256
 #define MAX_NAME_LENGTH	256
-
+#define MAX_INJECTTION  17*1024*1024
 #define DEV_ID_KZ	0x03
 #define DEV_ID_MT	0x33
 #define DEV_ID_JF	0x93
@@ -56,7 +56,11 @@ enum
 #define TELEREFRESHSHEET 1
 #define TELEREPALYCONFIG 2
 
-
+typedef struct
+{
+	unsigned short CmdBcnt;
+	char Buf[256*64];
+}CMDbuf;
 typedef struct
 {
 	unsigned char dev_id;
@@ -90,10 +94,13 @@ typedef struct
 {
 	char type;
 	int clientCode;
-	char taskCode;
+	int taskCode;
 	int starttime;
 	unsigned short timelength;
-	__int64 offsettime;
+	unsigned short offsettime0;
+	unsigned short offsettime1;
+	unsigned short offsettime2;
+	unsigned short offsettime3;
 	unsigned short dataaddr;
 }InjectionInfo;
 typedef struct

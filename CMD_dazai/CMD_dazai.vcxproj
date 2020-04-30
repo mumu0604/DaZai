@@ -111,6 +111,7 @@
     <ClInclude Include="CMD_dazaiDlg.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="ControlCAN.H" />
+    <ClInclude Include="Ctelemetry.h" />
     <ClInclude Include="DlgAddCommand.h" />
     <ClInclude Include="DlgCANCOFIG.h" />
     <ClInclude Include="DlgCommandSheet.h" />
@@ -131,6 +132,7 @@
   <ItemGroup>
     <ClCompile Include="CMD_dazai.cpp" />
     <ClCompile Include="CMD_dazaiDlg.cpp" />
+    <ClCompile Include="Ctelemetry.cpp" />
     <ClCompile Include="DlgAddCommand.cpp" />
     <ClCompile Include="DlgCANCOFIG.cpp" />
     <ClCompile Include="DlgCommandSheet.cpp" />
