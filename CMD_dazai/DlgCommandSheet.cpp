@@ -33,7 +33,7 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	, m_check_istaskdata(FALSE)
 	, m_EditTaskInjectionDatafiel(_T(""))
 	, m_checkSinglecmdlvds(FALSE)
-	, m_checkSinglecmdcan(FALSE)
+	, m_checkSinglecmdcan(TRUE)
 {
 	m_iRealCmdCnt = 0;
 	m_mappackType["添加业务任务"] = 0x40;
@@ -1384,8 +1384,8 @@ void CDlgCommandSheet::OnBnClickedButtonCansend()
 	if (m_checkCANimmedieate)
 	{
 		int index = m_ComboCancmd.GetCurSel();
-		char buffer[8];
-		memcpy(buffer, m_pCANcmdInfo[index]->init_value, 8);
+		char buffer[CANSEGLENGTH];
+		memcpy(buffer, m_pCANcmdInfo[index]->init_value, m_pCANcmdInfo[index]->arg_byte_num);
 		m_pInterface->getCANimmediatebuf(m_pCANcmdInfo[index]->datatype[0], buffer, &m_pInterface->m_sendcandatabuf);
 	}
 //	m_pInterface->Releasethread(m_pInterface->m_hMutexCan);
