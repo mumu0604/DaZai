@@ -9,6 +9,7 @@
 #include "TeleDisplay.h"
 #include <sys/types.h>    
 #include <sys/stat.h>  
+#include <ctime>
 IMPLEMENT_DYNAMIC(CDlgCommandSheet, CDialogEx)
 
 CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
@@ -24,16 +25,18 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	, m_EditclientCode(0)
 	, m_EdittaskCode(0)
 	, m_Editstarttime(0)
-	, m_Edittimelength(0)
-	, m_Editoffsettime0(0)
-	, m_Editoffsettime1(0)
-	, m_Editoffsettime2(0)
-	, m_Editoffsettime3(0)
+	, m_Edittimelength(5)
+	, m_Editoffsettime0(1)
+	, m_Editoffsettime1(1)
+	, m_Editoffsettime2(1)
+	, m_Editoffsettime3(1)
 	, m_Editdataaddr(0)
 	, m_check_istaskdata(FALSE)
 	, m_EditTaskInjectionDatafiel(_T(""))
 	, m_checkSinglecmdlvds(FALSE)
 	, m_checkSinglecmdcan(TRUE)
+	, m_checkCANtele(FALSE)
+	, m_checkLVDStele(FALSE)
 {
 	m_iRealCmdCnt = 0;
 	m_mappackType["添加业务任务"] = 0x40;
@@ -80,6 +83,8 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_TASKINJECTDATAFILE, m_EditTaskInjectionDatafiel);
 	DDX_Check(pDX, IDC_CHECK_LISTCMDLVDS, m_checkSinglecmdlvds);
 	DDX_Check(pDX, IDC_CHECK_LISTCMDCAN, m_checkSinglecmdcan);
+	DDX_Check(pDX, IDC_CHECK_CANTELE, m_checkCANtele);
+	DDX_Check(pDX, IDC_CHECK_LVDSTELE, m_checkLVDStele);
 }
 
 
@@ -109,6 +114,8 @@ BEGIN_MESSAGE_MAP(CDlgCommandSheet, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECK_ISTASKDATA, &CDlgCommandSheet::OnBnClickedCheckIstaskdata)
 	ON_BN_CLICKED(IDC_BUTTON_TASKDATADIR, &CDlgCommandSheet::OnBnClickedButtonTaskdatadir)
 	ON_BN_CLICKED(IDC_BUTTON_SINGELCMDSEDN, &CDlgCommandSheet::OnBnClickedButtonSingelcmdsedn)
+	ON_BN_CLICKED(IDC_CHECK_CANTELE, &CDlgCommandSheet::OnBnClickedCheckCantele)
+	ON_BN_CLICKED(IDC_CHECK_LVDSTELE, &CDlgCommandSheet::OnBnClickedCheckLvdstele)
 END_MESSAGE_MAP()
 
 
@@ -224,8 +231,8 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	m_xml.Open("commands.xml");
 	GetCmdInfo(m_pCmdInfo);
 	GetLocalTime(&m_GPSTimeNowday);
-	SetTimer(0, 500, NULL);
-
+	SetTimer(0, 1000, NULL);
+//	SetTimer(1, 1000, NULL);
 	m_menu.LoadMenu(IDR_MENUCMD);
 	CMenu *pMenu;
 	pMenu = m_menu.GetSubMenu(0);
@@ -247,14 +254,13 @@ BOOL CDlgCommandSheet::OnInitDialog()
 		m_ComboLVDScmd.AddString(str);
 	}
 
-	m_ComboBoxPackType.SetCurSel(0);
+	m_ComboBoxPackType.SetCurSel(3);
 	m_ComboCancmd.SetCurSel(0);
 	m_ComboLVDScmd.SetCurSel(0);
 	m_ComboBoxPackType.SetItemHeight(-1, 25);
 	m_ComboCancmd.SetItemHeight(-1, 25);
 	m_ComboLVDScmd.SetItemHeight(-1, 25);
-
-
+	
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -389,7 +395,7 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, "立即令");
 	}
 	else{
-		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, GetAbsTime(pAddedCmd->time));
+		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, m_CTeleDisplay.GetcmdTime(pAddedCmd->time));
 	}
 
 	m_ListCtrlCommand.SetItemText(index, COL_DESC, (char *)pCmdInfo->cmd_name);
@@ -900,6 +906,7 @@ void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
 	{
 	case 0:	
 		SetCurrentTimer();
+		m_pInterface->m_cantimebroadcast = true;
 		break;
 	case 1:
 		m_pInterface->m_canteleframesend = true;
@@ -1151,10 +1158,282 @@ void CDlgCommandSheet::OnBnClickedButtonCmdInput()
 	CString strFileName = dlg.GetPathName();
 	CString strExt = dlg.GetFileExt();
 	m_iRealCmdCnt = 0;
-//	LoadFromPLD(strFileName);
+	LoadFromPLD(strFileName);
 }
+unsigned short CRC16Table[256];
+
+void CRCTableGenerate(unsigned short h, unsigned char *crcTable)
+{
+	unsigned int i, j;
+	unsigned char m = 16;
+	unsigned int data;
+
+	for (i = 0; i < 256; i++){
+		data = i;
+		for (j = m; j > 0; j--){
+			if ((data & (1u << (m - 1))) == 0){
+				data <<= 1;
+			}
+			else{
+				data = (data << 1) ^ h;
+			}
+		}
+		for (j = 0; j < m >> 3; j++){
+			crcTable[(i << (m >> 4)) + j] = (unsigned char)((data & (0xFFu << (j << 3))) >> (j << 3) & 0xFFu);
+		}
+	}
+}
+unsigned short CRC16(unsigned char *pDataToCRC, unsigned short crc_init, int length_crc)
+{
+	unsigned short crc = crc_init;
+	unsigned short crc_tmp;
+	unsigned char da;
+	volatile int i;
+
+	for (i = 0; i < length_crc; i++){
+		da = (unsigned char)(crc >> 8);
+		crc_tmp = (unsigned short)(crc << 8);
+		crc = (unsigned short)(CRC16Table[da^ pDataToCRC[i]] ^ crc_tmp);
+	}
+	return(crc);
+}
+void CDlgCommandSheet::LoadFromPLD(CString fileName)
+{
+	CFile pldFile;
+	pldFile.Open(fileName, CFile::modeRead | CFile::typeBinary);
+	CMD_WN cmd;
+	CmdInfo *pCmdInfo;
+
+	unsigned char buf[32];
+	int cnt, idx = 0, iPos;
+
+	cnt = pldFile.GetLength();
+	// 	if ((cnt & 0x1F) != 10){
+	// 		return;
+	// 	}
+
+	cnt >>= 5;
+	//	pldFile.Read(buf, 8);//度xw_header[8]
+	unsigned short crc = 0;
+
+	// 	for (idx = 0; idx < cnt; idx++){
+	// 		pldFile.Read(buf, 32);
+	// 		crc = CRC16((unsigned char *)buf, crc, 32);
+	// 	}
+	// 	pldFile.Read(buf, 2);
+	// 	if ((((crc & 0xFF00) >> 8) != buf[0]) || ((crc & 0xFF) != buf[1])){
+	// 		MessageBox("文件格式错误！");
+	// 		return;
+	// 	}
+
+	pldFile.SeekToBegin();
+	//	pldFile.Read(buf, 8);
 
 
+
+	for (int i = 0; i < cnt; i++){
+		pldFile.Read(buf, 32);
+		iPos = 4;
+		for (int j = 0; j < (buf[3] & 0xF); j++){
+			cmd.dev_id = buf[0];
+			cmd.bus_flag = buf[2] & 0xF0;
+			cmd.immediate_flag = (buf[3] & 0xF0) ? 0 : 1;
+
+			cmd.time = (buf[iPos] << 24) | (buf[iPos + 1] << 16) |
+				(buf[iPos + 2] << 8) | buf[iPos + 3];
+			iPos += 4;
+
+			cmd.cmd_id = buf[iPos];
+			pCmdInfo = m_pCmdInfo[cmd.cmd_id];
+			if (!pCmdInfo){
+				MessageBox("指令码错误,导入注入数据失败！", "错误");
+				return;
+			}
+			iPos++;
+			memcpy(cmd.args, buf + iPos, pCmdInfo->arg_byte_num);
+			iPos += pCmdInfo->arg_byte_num;
+			//			AddCmdToList(&cmd, -1, 1);
+			AddCmdToList(&cmd, m_iRealCmdCnt, 1);
+			memcpy(&m_cmdAddInfo[m_iRealCmdCnt], &cmd, sizeof(CMD_WN));
+			m_iRealCmdCnt++;
+		}
+	}
+	pldFile.Close();
+}
+void CDlgCommandSheet::SaveToPLD(CFile *pldFile)
+{
+	int i, j;
+	CMD_WN *pCmd;
+	CmdInfo *pCmdInfo;
+	int cmdTimeFlag;
+
+	char *pBuf, *pBuf1;
+	int cnt;
+
+	int idx32B = 0, eventNum32B = 0, dev32B, bus32B, left32B = 0, time32B, byte32B;//数据注入段采用32字节
+	//指令类型：1字节，指令序列计数：1字节；数据注入段顺序、AB总线标志：1字节；事件标识：1字节；数据：28字节
+	int cnt32BDev[4] = { 0, 0, 0, 0 }, start32BDev[4] = { 0, 0, 0, 0 }, end32BDev[4] = { 0, 0, 0, 0 };
+	int devIndex;
+
+	unsigned int time;
+
+	unsigned char sum;
+	char xw_header[8];
+
+	pBuf1 = (char *)malloc(32 * 1024 + 8);
+	pBuf = pBuf1;
+
+	cnt = m_ListCtrlCommand.GetItemCount();
+	if (cnt > 1024){
+		cnt = 1024;
+	}
+	eventNum32B = 0;
+	idx32B = 0;
+	char *buffer;
+	char buffer1[64];
+	for (i = 0; i < cnt; i++){
+		buffer = (char*)m_ListCtrlCommand.GetItemData(i);
+		memcpy(buffer1, buffer, 40);
+		pCmd = (CMD_WN *)m_ListCtrlCommand.GetItemData(i);
+		pCmdInfo = m_pCmdInfo[pCmd->cmd_id & 0xFF];
+		if (!pCmdInfo){
+			MessageBox("无法读取指令定义信息，导出到注入文件失败！", "错误");
+			free(pBuf1);
+			return;
+		}
+			
+		cmdTimeFlag = 1;
+		if (pCmd->immediate_flag){
+			cmdTimeFlag = 0;
+		}
+
+		if ((left32B < pCmdInfo->arg_byte_num + 5) || //32B full
+			(pCmd->dev_id != dev32B) || //device changed
+			(pCmd->bus_flag != bus32B) || //bus changed
+			(cmdTimeFlag != time32B)){	//time flag changed
+			//1.output old 32B
+			if (eventNum32B > 0){
+				pBuf[0] = dev32B;
+				devIndex = ((dev32B & 0x80) >> 6) | ((dev32B & 0x20) >> 5);//a simple hack for retrieving device index.
+				if ((dev32B == DEV_ID_KZ) && (time32B == 0)){
+					pBuf[1] = 0;
+					pBuf[2] = bus32B;
+				}
+				else{
+					pBuf[1] = cnt32BDev[devIndex];
+					if (!cnt32BDev[devIndex]){
+						start32BDev[devIndex] = idx32B;
+					}
+					end32BDev[devIndex] = idx32B;
+					cnt32BDev[devIndex] ++;
+					pBuf[2] = bus32B | 0xC;
+				}
+				pBuf[3] = eventNum32B;
+				if (time32B){
+					pBuf[3] |= 0xF0;
+				}
+				memset(pBuf + byte32B, 0x5A, left32B);
+				idx32B++;
+				pBuf += 32;
+			}
+
+			//2. new 32B
+			eventNum32B = 0;//指令计数
+			dev32B = pCmd->dev_id;
+			bus32B = pCmd->bus_flag;
+			left32B = 27;
+			byte32B = 4;
+			time32B = cmdTimeFlag;
+		}
+		time = 0;
+		if (time32B){
+			time = pCmd->time;
+		}
+		pBuf[byte32B] = (time & 0xFF000000) >> 24;
+		pBuf[byte32B + 1] = (time & 0xFF0000) >> 16;
+		pBuf[byte32B + 2] = (time & 0xFF00) >> 8;
+		pBuf[byte32B + 3] = time & 0xFF;//时间，立即令是0
+		pBuf[byte32B + 4] = pCmd->cmd_id;//指令ID
+		memcpy(pBuf + byte32B + 5, pCmd->args, pCmdInfo->arg_byte_num);//参数写入
+		byte32B += pCmdInfo->arg_byte_num + 5;
+		left32B -= pCmdInfo->arg_byte_num + 5;
+		eventNum32B++;
+	}
+
+	pBuf[0] = dev32B;
+	devIndex = ((dev32B & 0x80) >> 6) | ((dev32B & 0x20) >> 5);//a simple hack for retrieving device index.
+	if ((dev32B == DEV_ID_KZ) && (time32B == 0)){
+		pBuf[1] = 0;
+		pBuf[2] = bus32B;//ABcan总线
+	}
+	else{
+		pBuf[1] = cnt32BDev[devIndex];//指令序列计数
+		if (!cnt32BDev[devIndex]){
+			start32BDev[devIndex] = idx32B;
+		}
+		end32BDev[devIndex] = idx32B;
+		cnt32BDev[devIndex] ++;
+		pBuf[2] = bus32B | 0xC;
+	}
+	pBuf[3] = eventNum32B;
+	if (time32B){
+		pBuf[3] |= 0xF0;
+	}
+
+	memset(pBuf + byte32B, 0x5A, left32B);
+	idx32B++;
+
+	for (i = 0; i < 4; i++){
+		if (!cnt32BDev[i]){
+			continue;
+		}
+		if (cnt32BDev[i] == 1){
+			pBuf1[2 + start32BDev[i] * 32] = pBuf1[2 + start32BDev[i] * 32] & 0xF0;
+		}
+		else{
+			pBuf1[2 + start32BDev[i] * 32] = (pBuf1[2 + start32BDev[i] * 32] & 0xF0) | 0x03;
+			pBuf1[2 + end32BDev[i] * 32] = (pBuf1[2 + end32BDev[i] * 32] & 0xF0) | 0x0F;
+		}
+	}
+
+	pBuf = pBuf1;
+	for (i = 0; i < idx32B; i++){
+		sum = 0;
+		for (j = 0; j < 31; j++){
+			sum += pBuf[j];
+		}
+		pBuf[31] = sum;
+		pBuf += 32;
+	}
+
+
+	unsigned short crc;
+	pBuf = pBuf1;
+	crc = CRC16((unsigned char *)pBuf, 0, idx32B * 32);
+	// 	pBuf[idx32B * 32] = (crc & 0xFF00) >> 8;
+	// 	pBuf[idx32B * 32 + 1] = crc & 0xFF;
+
+
+	i = idx32B * 32 + 2;
+	xw_header[0] = (i & 0xFF000000) >> 24;
+	xw_header[1] = (i & 0xFF0000) >> 16;
+	xw_header[2] = (i & 0xFF00) >> 8;
+	xw_header[3] = i & 0xFF;
+	xw_header[4] = 0x01;
+	xw_header[5] = 0x24;
+	crc = 0;
+	for (i = 0; i < idx32B * 32 + 2; i++){
+		crc += (unsigned char)(pBuf[i]);
+	}
+	xw_header[6] = (crc & 0xFF00) >> 8;
+	xw_header[7] = crc & 0xFF;
+
+	//	pldFile->Write(xw_header, 8);
+	//	pldFile->Write(pBuf, idx32B * 32 + 2);
+	pldFile->Write(pBuf, idx32B * 32);	
+	free(pBuf1);
+	//	m_Str_send += "\r\n";
+}
 void CDlgCommandSheet::OnBnClickedButtonOutput()
 {
 	// TODO: Add your control notification handler code here
@@ -1170,7 +1449,7 @@ void CDlgCommandSheet::OnBnClickedButtonOutput()
 
 	char filter[] = "QCmdList Files(*.bin) |*.bin|QCmdTxt Files(*.txt) |*.txt||";
 	CString FileName;
-	CFileDialog dlgOpen(FALSE, NULL, TEXT("list"), OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ENABLESIZING | OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_FILEMUSTEXIST, (LPCTSTR)filter, NULL);
+	CFileDialog dlgOpen(FALSE, NULL, TEXT("cmdlist"), OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ENABLESIZING | OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_FILEMUSTEXIST, (LPCTSTR)filter, NULL);
 	if (dlgOpen.DoModal() == IDOK)
 		FileName = dlgOpen.GetPathName();
 	else
@@ -1192,7 +1471,7 @@ void CDlgCommandSheet::OnBnClickedButtonOutput()
 	CFile pld_file;
 
 	pld_file.Open(FileName, CFile::modeCreate | CFile::modeWrite | CFile::typeBinary, NULL);
-//	SaveToPLD(&pld_file);
+	SaveToPLD(&pld_file);
 	pld_file.Close();
 	AfxMessageBox(_T("导出成功！"));
 }
@@ -1277,10 +1556,16 @@ bool CDlgCommandSheet::GetCMDsingle(CMDbuf *cmdbuf)
 	idx += pCmdInfo->arg_byte_num;
 	cmdbuf->CmdBcnt = idx;
 }
-//获取任务帧参数
+//获取任务帧参数 开始时间要修改
 void CDlgCommandSheet::Getinjectionpara(InjectionInfo *Injectionpara)
 {
 	CString strtmp;
+	if (m_Editstarttime == 0)
+	{
+		time_t nowtime;
+		nowtime = time(NULL);
+		m_Editstarttime = nowtime;
+	}
 	m_ComboBoxPackType.GetWindowText(strtmp);
 	Injectionpara->type = m_mappackType[strtmp];
 	Injectionpara->clientCode = m_EditclientCode;
@@ -1292,6 +1577,7 @@ void CDlgCommandSheet::Getinjectionpara(InjectionInfo *Injectionpara)
 	Injectionpara->offsettime3 = m_Editoffsettime3;
 	Injectionpara->dataaddr = m_Editdataaddr;
 	Injectionpara->timelength = m_Edittimelength;
+	
 }
 //cmd和data打包成应用层格式 InjectionBuffer注入数据包 dataFramBuffer应用层帧
 int CDlgCommandSheet::getcmdinjectiondata(CMDbuf cmdbuf, char *InjectionBuffer, char *dataFramBuffer)
@@ -1536,4 +1822,40 @@ void CDlgCommandSheet::OnBnClickedButtonTaskdatadir()
 void CDlgCommandSheet::OnBnClickedButtonSingelcmdsedn()
 {
 	// TODO: Add your control notification handler code here
+	OnCmdSend();
+}
+
+
+void CDlgCommandSheet::OnBnClickedCheckCantele()
+{
+	// TODO: Add your control notification handler code here
+	m_checkCANtele = !m_checkCANtele;
+	if (m_checkCANtele)
+	{
+		m_pInterface->m_canteleframesend = true;
+	}
+	m_pInterface->m_lvdsteleframesend = false;
+	if (m_checkCANtele)
+	{
+		m_checkLVDStele = FALSE;
+	}
+	UpdateData(FALSE);
+}
+
+
+void CDlgCommandSheet::OnBnClickedCheckLvdstele()
+{
+	// TODO: Add your control notification handler code here
+	m_checkLVDStele = !m_checkLVDStele;
+	m_pInterface->m_canteleframesend = false;
+	if (m_checkLVDStele)
+	{
+		m_pInterface->m_lvdsteleframesend = true;
+	}
+	
+	if (m_checkLVDStele)
+	{
+		m_checkCANtele = FALSE;
+	}
+	UpdateData(FALSE);
 }

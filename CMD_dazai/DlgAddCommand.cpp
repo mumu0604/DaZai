@@ -410,19 +410,21 @@ void CDlgAddCommand::OnBnClickedOk()
 	t_time.wMinute = ct.GetMinute();
 	t_time.wSecond = ct.GetSecond();
 	t_time.wMilliseconds = 0;
-	ULARGE_INTEGER m_bas;
-	//	SystemTimeToFileTime(&t_time, (FILETIME *)&m_bas);
-	SystemTimeToFileTime(&t_time, (FILETIME *)&m_pDlg->m_base_relative);
+
+	time_t pt = m_pDlg->m_CTeleDisplay.SystemTimeToTimet(t_time);
+
+// 	SYSTEMTIME st;
+// 	time_t nowtime;
+// 	nowtime = time(NULL);
+// 	struct tm *local;
+// 	local = localtime(&nowtime);
+// 	time_t aa = mktime(local); 	
+// 	CString str = asctime(local);
+//	SystemTimeToFileTime(&t_time, (FILETIME *)&m_pDlg->m_base_relative);
 
 
-	//	m_pDlg->m_base_relative.QuadPart = f.QuadPart;
-
-	//	sec = ct.GetHour() * 3600 + ct.GetMinute() * 60 + ct.GetSecond();
-
-
-	m_pCmd_WN->time = 0;
 	if (!m_pCmd_WN->immediate_flag){
-		m_pCmd_WN->time = m_pDlg->m_base_relative.QuadPart / SEC_PER_100ns + sec;
+		m_pCmd_WN->time = pt;
 	}
 
 

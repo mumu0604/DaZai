@@ -65,6 +65,8 @@ public:
 	bool GetCMDsingle(CMDbuf *cmdbuf);
 	void Getinjectionpara(InjectionInfo *Injectionpara);
 	int getcmdinjectiondata(CMDbuf cmdbuf, char *InjectionBuffer, char *dataFramBuffer);
+	void SaveToPLD(CFile *pldFile);
+	void LoadFromPLD(CString fileName);
 	SYSTEMTIME m_GPSTimeNowday;
 	CMenu m_menu;
 	unsigned char m_bus_flag;
@@ -130,4 +132,8 @@ public:
 	BOOL m_checkSinglecmdlvds;
 	BOOL m_checkSinglecmdcan;
 	afx_msg void OnBnClickedButtonSingelcmdsedn();
+	BOOL m_checkCANtele;
+	BOOL m_checkLVDStele;
+	afx_msg void OnBnClickedCheckCantele();
+	afx_msg void OnBnClickedCheckLvdstele();
 };
