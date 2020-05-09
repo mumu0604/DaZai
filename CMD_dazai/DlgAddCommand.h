@@ -67,7 +67,7 @@ public:
 	CDynComboBox* CreateComboBox(int id, int width, xmlNodePtr pNode);
 	CDynEdit* CreatMyEdit(int id, int width, CString text, bool canEdit, int bitLength, double coef);
 	void InitUI(unsigned char *pCmd);
-	CDateTimeCtrl m_timePicker;
 	afx_msg void OnBnClickedOk();
 	BOOL m_CheckTimeFlag;
+	short m_editCMDoffsettime;
 };

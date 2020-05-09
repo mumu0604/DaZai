@@ -223,6 +223,8 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	get_control_original_proportion();
 	m_xml.Open("monitor.xml");
 	m_MonitorCmdNum=GetMonitorxmlInfo(m_pMonitorInfo);
+//	memcpy(m_CTeleDisplay.m_pMonitorInfo, m_pMonitorInfo, 256 * sizeof(CmdInfo));
+//	m_CTeleDisplay.m_pMonitorInfo = m_pMonitorInfo;
 	m_xml.Open("commandsCan.xml");
 	m_CANcmdNum = GetMonitorxmlInfo(m_pCANcmdInfo);
 	m_xml.Open("commands_LVDS.xml");
@@ -260,7 +262,24 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	m_ComboBoxPackType.SetItemHeight(-1, 25);
 	m_ComboCancmd.SetItemHeight(-1, 25);
 	m_ComboLVDScmd.SetItemHeight(-1, 25);
-	
+
+	m_CTeleDisplay.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_ListTeleOutput);
+	COLORREF color;
+	color = RGB(51, 153, 255);
+	m_ListTeleOutput.SetColColor(0, color);
+// 	color = RGB(255, 0, 0);
+// 	m_ListTeleOutput.SetColColor(1, color);
+	UpdateData(FALSE);
+
+	///open can card
+// 	if (dlgCanConfig.DoModal() == IDOK)
+// 	{
+// 		m_pInterface->m_connect_CAN = dlgCanConfig.m_connect_CAN;
+// 		m_pInterface->m_connect_LVDS = dlgCanConfig.m_connect_LVDS;
+// 		m_pInterface->m_connect_RS422 = dlgCanConfig.m_connect_RS422;
+// 		m_pInterface->m_cannum = dlgCanConfig.m_cannum;
+// 	}
+
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -395,7 +414,8 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, "立即令");
 	}
 	else{
-		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, m_CTeleDisplay.GetcmdTime(pAddedCmd->time));
+		strBuf.Format("TO + %d", pAddedCmd->time);
+		m_ListCtrlCommand.SetItemText(index, COL_ABS_TIME, strBuf);
 	}
 
 	m_ListCtrlCommand.SetItemText(index, COL_DESC, (char *)pCmdInfo->cmd_name);
@@ -771,115 +791,16 @@ int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
 	return xmlCMDnum;
 }
 
-UINT CDlgCommandSheet::ReceiveThread(void *param)
-{
-	CDlgCommandSheet *dlgCommandSheet = (CDlgCommandSheet*)param;
-	CDlgCANCOFIG *dlgCan = &(dlgCommandSheet->dlgCanConfig);
-	VCI_CAN_OBJ frameinfo[50];
-	VCI_ERR_INFO errinfo;
-	int len = 1;
-	int i = 0;
-	CString str, tmpstr;
-	int m_recvcount = 0;
-	while (1)
-	{
-		Sleep(1);
-		if ((dlgCan->m_connect_CAN == 0))
-			break;
-		len = VCI_Receive(dlgCan->m_devtype, dlgCan->m_devind, dlgCan->m_cannum, frameinfo, 50, 200);
-		if (len <= 0)
-		{
-			//注意：如果没有读到数据则必须调用此函数来读取出当前的错误码，
-			//千万不能省略这一步（即使你可能不想知道错误码是什么）
-			VCI_ReadErrInfo(dlgCan->m_devtype, dlgCan->m_devind, dlgCan->m_cannum, &errinfo);
-		}
-		else
-		{
-#if 1
-			m_recvcount += len;
-			str.Format("         本次接收 %d 帧  总接收 %d 帧", len, m_recvcount);
-//			box->InsertString(box->GetCount(), str);
-			for (i = 0; i < len; i++)
-			{
-				str = "接收到CAN帧:  ";
-				if (frameinfo[i].TimeFlag == 0)
-					tmpstr = "时间标识:无  ";
-				else
-					tmpstr.Format("时间标识:%08x ", frameinfo[i].TimeStamp);
-				str += tmpstr;
-				tmpstr.Format("帧ID:%08x ", frameinfo[i].ID);
-				str += tmpstr;
-				str += "帧格式:";
-				if (frameinfo[i].RemoteFlag == 0)
-					tmpstr = "数据帧 ";
-				else
-					tmpstr = "远程帧 ";
-				str += tmpstr;
-				str += "帧类型:";
-				if (frameinfo[i].ExternFlag == 0)
-					tmpstr = "标准帧 ";
-				else
-					tmpstr = "扩展帧 ";
-				str += tmpstr;
-//				box->InsertString(box->GetCount(), str);
-				if (frameinfo[i].RemoteFlag == 0)
-				{
-					str = "数据:";
-					if (frameinfo[i].DataLen > 8)
-						frameinfo[i].DataLen = 8;
-					for (int j = 0; j < frameinfo[i].DataLen; j++)
-					{
-						tmpstr.Format("%02x ", frameinfo[i].Data[j]);
-						str += tmpstr;
-					}
-					//EnterCriticalSection(&(dlg->m_Section));
-					//LeaveCriticalSection(&(dlg->m_Section));
-	//				box->InsertString(box->GetCount(), str);
-				}
-				// 				if (box->GetCount()>50)
-				// 				{
-				// 					box->ResetContent();
-				// 				}
-			}
-			if (1)
-			{
-				//	frameinfo[0].Data[0]=0xff;
-				//	frameinfo[0].Data[1]=0xff;
-				ULONG ret = VCI_Transmit(dlgCan->m_devtype, dlgCan->m_devind, dlgCan->m_cannum, &frameinfo[0], len);
-
-				CTime tm = CTime::GetCurrentTime();
-				if ((int)ret != len)
-				{
-					str.Format("本次回复 %d 帧  实际回复 %d 帧 总回复 %d 帧 ----------回复不正常", len, ret, ret);
-
-				}
-				else
-				{
-					str.Format("本次回复 %d 帧  实际回复 %d 帧 总回复 %d 帧", len, ret, ret);
-				}
-//				box->InsertString(box->GetCount(), str);
-				str = tm.Format("%Y_%m_%d_%H_%M_%S") + " --- " + str;
-//				dlgCan->m_f.Write(str, str.GetLength());
-			}
-//			box->SetCurSel(box->GetCount() - 1);
-#endif
-
-
-		}
-	}
-	return 0;
-}
 void CDlgCommandSheet::OnBnClickedButtonCanpara()
 {
 	// TODO: Add your control notification handler code here
 	char buffer[1024];	
-
-	if (dlgCanConfig.DoModal() == IDOK)
+	if (m_dlgCanConfig.DoModal() == IDOK)
 	{
-		m_pInterface->m_connect_CAN = dlgCanConfig.m_connect_CAN;
-		m_pInterface->m_connect_LVDS = dlgCanConfig.m_connect_LVDS;
-		m_pInterface->m_connect_RS422 = dlgCanConfig.m_connect_RS422;
-		m_pInterface->m_cannum = dlgCanConfig.m_cannum;
+		m_pInterface->m_connect_CAN = m_dlgCanConfig.m_connect_CAN;
+		m_pInterface->m_connect_LVDS = m_dlgCanConfig.m_connect_LVDS;
+		m_pInterface->m_connect_RS422 = m_dlgCanConfig.m_connect_RS422;
+		m_pInterface->m_cannum = m_dlgCanConfig.m_cannum;
 	
 
 	}
@@ -898,21 +819,49 @@ void CDlgCommandSheet::SetCurrentTimer()
 		t.wMilliseconds);
 	GetDlgItem(IDC_BUTTON_CURRENTTIME)->SetWindowText(strBuf);
 }
+void CDlgCommandSheet::Setteleinitvalue(TELEbuf telebuf)
+{
+	CmdInfo *pCmdInfo;
+	int k = 0;
+	int idx = 0;
+	while (k < telebuf.len)
+	{		
+		pCmdInfo = m_pMonitorInfo[idx];
+		
+		memcpy(pCmdInfo->init_value, telebuf.Buf + k, pCmdInfo->arg_byte_num);
+		k += pCmdInfo->arg_byte_num;
+		idx++;
+	}
+}
 void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: Add your message handler code here and/or call default
 	
 	switch (nIDEvent)
 	{
-	case 0:	
+	case TIEMRCOMMANDTIEM:
 		SetCurrentTimer();
+		if (m_pInterface->m_telebuffull)
+		{
+			Setteleinitvalue(m_pInterface->m_telebuf);
+			m_CTeleDisplay.displayList(false, m_pMonitorInfo, m_MonitorCmdNum, &m_ListTeleOutput);
+			m_pInterface->m_telebuffull = false;
+		}
 		m_pInterface->m_cantimebroadcast = true;
 		break;
-	case 1:
+	case TIMERCANSENTELE:
 		m_pInterface->m_canteleframesend = true;
 		break;
-	case 2:
+	case TIEMRLVDSSENDTELE:
 		m_pInterface->m_lvdsteleframesend = true;
+	case TIMERTELEDISPLAY://遥测显示
+		if (m_pInterface->m_telebuffull)
+		{
+			Setteleinitvalue(m_pInterface->m_telebuf);
+			m_CTeleDisplay.displayList(true, m_pMonitorInfo, m_MonitorCmdNum,&m_ListTeleOutput);
+			m_pInterface->m_telebuffull = false;
+		}
+		
 	default:
 		break;
 	}
@@ -1505,7 +1454,7 @@ bool CDlgCommandSheet::GetCMDlist(CMDbuf *cmdbuf)
 			MessageBox("指令列表里没有指令！", "错误");
 			return false;
 		}
-		if (pCmd->immediate_flag)
+		if (!pCmd->immediate_flag)
 		{
 			cmdtime = pCmd->time;///////////////////时间值需要修改
 		}
@@ -1544,7 +1493,7 @@ bool CDlgCommandSheet::GetCMDsingle(CMDbuf *cmdbuf)
 		MessageBox("指令列表里没有指令！", "错误");
 		return false;
 	}
-	if (pCmd->immediate_flag)
+	if (!pCmd->immediate_flag)
 	{
 		cmdtime = pCmd->time;///////////////////时间值需要修改
 	}

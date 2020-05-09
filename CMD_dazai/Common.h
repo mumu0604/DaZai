@@ -55,6 +55,13 @@ enum
 #define TELECOMMANDSHEET 0
 #define TELEREFRESHSHEET 1
 #define TELEREPALYCONFIG 2
+#define TELEFRAMELEN				512		//“£≤‚÷°≥§∂»
+
+typedef struct
+{
+	char Buf[TELEFRAMELEN];
+	int len;
+}TELEbuf;
 
 typedef struct
 {

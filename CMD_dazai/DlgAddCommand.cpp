@@ -14,6 +14,7 @@ IMPLEMENT_DYNAMIC(CDlgAddCommand, CDialogEx)
 CDlgAddCommand::CDlgAddCommand(CDlgCommandSheet *pDlg, CMD_WN *pCmd, int bNew, CWnd* pParent /*=NULL*/)
 	: CDialogEx(CDlgAddCommand::IDD, pParent)
 	, m_CheckTimeFlag(FALSE)
+	, m_editCMDoffsettime(1)
 {
 	m_pDlg = pDlg;
 	m_pCmd_WN = pCmd;
@@ -27,8 +28,8 @@ void CDlgAddCommand::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_ADDCMD, m_ListAddCMD);
-	DDX_Control(pDX, IDC_DATETIMEPICKER, m_timePicker);
 	DDX_Check(pDX, IDC_CHECK_IMMADIATE, m_CheckTimeFlag);
+	DDX_Text(pDX, IDC_EDITCMDOFFSET, m_editCMDoffsettime);
 }
 
 
@@ -127,10 +128,10 @@ BOOL CDlgAddCommand::OnInitDialog()
 		xmlXPathFreeObject(xpathObj);
 	}
 	get_control_original_proportion();
-	m_timePicker.SetFormat("yyyy-MM-dd HH:mm:ss");
-	COleDateTime starttime(2020, 1, 1, 0, 0, 0);
-	COleDateTime endtime(2050, 1, 1, 0, 0, 0);
-	m_timePicker.SetRange(&starttime, &endtime);
+//	m_timePicker.SetFormat("yyyy-MM-dd HH:mm:ss");
+// 	COleDateTime starttime(2020, 1, 1, 0, 0, 0);
+// 	COleDateTime endtime(2050, 1, 1, 0, 0, 0);
+//	m_timePicker.SetRange(&starttime, &endtime);
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -397,21 +398,21 @@ void CDlgAddCommand::OnBnClickedOk()
 	m_pCmd_WN->bus_flag = m_pDlg->m_bus_flag;
 
 
-	COleDateTime ct;
-	int sec = 0;
-	ULARGE_INTEGER f;
-	__int64 diff;
-	SYSTEMTIME t_time;
-	m_timePicker.GetTime(ct);
-	t_time.wYear = ct.GetYear();
-	t_time.wMonth = ct.GetMonth();
-	t_time.wDay = ct.GetDay();
-	t_time.wHour = ct.GetHour();
-	t_time.wMinute = ct.GetMinute();
-	t_time.wSecond = ct.GetSecond();
-	t_time.wMilliseconds = 0;
+// 	COleDateTime ct;
+// 	int sec = 0;
+// 	ULARGE_INTEGER f;
+// 	__int64 diff;
+// 	SYSTEMTIME t_time;
+// 	m_timePicker.GetTime(ct);
+// 	t_time.wYear = ct.GetYear();
+// 	t_time.wMonth = ct.GetMonth();
+// 	t_time.wDay = ct.GetDay();
+// 	t_time.wHour = ct.GetHour();
+// 	t_time.wMinute = ct.GetMinute();
+// 	t_time.wSecond = ct.GetSecond();
+// 	t_time.wMilliseconds = 0;
 
-	time_t pt = m_pDlg->m_CTeleDisplay.SystemTimeToTimet(t_time);
+//	time_t pt = m_pDlg->m_CTeleDisplay.SystemTimeToTimet(t_time);
 
 // 	SYSTEMTIME st;
 // 	time_t nowtime;
@@ -424,7 +425,7 @@ void CDlgAddCommand::OnBnClickedOk()
 
 
 	if (!m_pCmd_WN->immediate_flag){
-		m_pCmd_WN->time = pt;
+		m_pCmd_WN->time = m_editCMDoffsettime;
 	}
 
 

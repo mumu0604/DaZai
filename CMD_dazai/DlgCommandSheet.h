@@ -13,6 +13,11 @@
 using namespace std;
 // CDlgCommandSheet dialog
 
+
+#define TIMERTELEDISPLAY			3			//“£≤‚œ‘ æ
+#define TIMERCANSENTELE				1			//CAN TELE
+#define TIEMRLVDSSENDTELE			2			//LVDS TELE
+#define TIEMRCOMMANDTIEM			0			//LVDS TELE
 class CDlgCommandSheet : public CDialogEx
 {
 	DECLARE_DYNAMIC(CDlgCommandSheet)
@@ -39,7 +44,7 @@ public:
 	}control;
 	CRect m_rect;
 	list<control*> m_con_list;
-	CDlgCANCOFIG dlgCanConfig;
+	CDlgCANCOFIG m_dlgCanConfig;
 	virtual BOOL OnInitDialog();
 	CListCtrl m_ListCtrlCommand;
 	CXML m_xml;
@@ -67,6 +72,7 @@ public:
 	int getcmdinjectiondata(CMDbuf cmdbuf, char *InjectionBuffer, char *dataFramBuffer);
 	void SaveToPLD(CFile *pldFile);
 	void LoadFromPLD(CString fileName);
+	void Setteleinitvalue(TELEbuf telebuf);
 	SYSTEMTIME m_GPSTimeNowday;
 	CMenu m_menu;
 	unsigned char m_bus_flag;
@@ -89,7 +95,6 @@ public:
 	int m_editCmdSendCnt;
 	int m_editCmdReactCnt;
 	CListCtrlCl m_ListTeleOutput;
-	static UINT ReceiveThread(void *param);
 	int m_MonitorCmdNum;
 	int m_CANcmdNum;
 	int m_LVDScmdNum;
