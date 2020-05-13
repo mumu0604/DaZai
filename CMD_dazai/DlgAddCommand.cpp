@@ -18,6 +18,7 @@ CDlgAddCommand::CDlgAddCommand(CDlgCommandSheet *pDlg, CMD_WN *pCmd, int bNew, C
 {
 	m_pDlg = pDlg;
 	m_pCmd_WN = pCmd;
+	m_bNew = bNew;
 }
 
 CDlgAddCommand::~CDlgAddCommand()
@@ -128,6 +129,10 @@ BOOL CDlgAddCommand::OnInitDialog()
 		xmlXPathFreeObject(xpathObj);
 	}
 	get_control_original_proportion();
+	if (!m_bNew)
+	{
+		ReviseCmd();
+	}
 //	m_timePicker.SetFormat("yyyy-MM-dd HH:mm:ss");
 // 	COleDateTime starttime(2020, 1, 1, 0, 0, 0);
 // 	COleDateTime endtime(2050, 1, 1, 0, 0, 0);
@@ -136,7 +141,28 @@ BOOL CDlgAddCommand::OnInitDialog()
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
 
+void CDlgAddCommand::ReviseCmd()
+{
 
+	// TODO: Add your control notification handler code here
+//	m_bHaveChosenCmd = true;
+
+	xmlXPathObjectPtr xpathObj;
+	xmlNodePtr pNode;
+	xmlChar *xmlRtn;
+	char *endptr;
+
+	char xpath_expr[200];
+	CString strCmdName;
+
+	DeleteEditAndCombo();
+	m_rect.SetRect(CANVAS_LEFTTOPx, CANVAS_LEFTTOPy, CANVAS_LEFTTOPx + CANVAS_WIDTH, CANVAS_LEFTTOPy + LINEHEIGHT);
+	InitUI((unsigned char *)(LPCSTR)(strCmdName));//根据strCmdName从command.xml 解析出指令内容
+	SetValueToUI(m_pCmd_WN->cmd_id, m_pCmd_WN->args);
+	m_editCMDoffsettime = m_pCmd_WN->time;
+	UpdateData(false);
+
+}
 void CDlgAddCommand::OnNMDblclkListAddcmd(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);

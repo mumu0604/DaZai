@@ -35,7 +35,7 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	, m_EditTaskInjectionDatafiel(_T(""))
 	, m_checkSinglecmdlvds(FALSE)
 	, m_checkSinglecmdcan(TRUE)
-	, m_checkCANtele(FALSE)
+	, m_checkCANtele(TRUE)
 	, m_checkLVDStele(FALSE)
 {
 	m_iRealCmdCnt = 0;
@@ -46,7 +46,8 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	m_mappackType["删除业务任务"] = 0x80;
 	m_mappackType["删除重构任务"] = 0x83;
 	m_mappackType["删除测试任务"] = 0x87;
-	
+	m_iscandatasend = FALSE;
+	m_islvdsdatasend = FALSE;
 }
 
 CDlgCommandSheet::~CDlgCommandSheet()
@@ -233,8 +234,16 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	m_xml.Open("commands.xml");
 	GetCmdInfo(m_pCmdInfo);
 	GetLocalTime(&m_GPSTimeNowday);
-	SetTimer(0, 1000, NULL);
-//	SetTimer(1, 1000, NULL);
+	SetTimer(0, 500, NULL);
+	SetTimer(TIMERBROADCAST, 1000, NULL);
+	if (m_checkCANtele)
+	{
+		SetTimer(TIMERCANSENTELE, 1000, NULL);
+	}
+	if (m_checkLVDStele)
+	{
+		SetTimer(TIEMRLVDSSENDTELE, 1000, NULL);
+	}
 	m_menu.LoadMenu(IDR_MENUCMD);
 	CMenu *pMenu;
 	pMenu = m_menu.GetSubMenu(0);
@@ -262,23 +271,25 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	m_ComboBoxPackType.SetItemHeight(-1, 25);
 	m_ComboCancmd.SetItemHeight(-1, 25);
 	m_ComboLVDScmd.SetItemHeight(-1, 25);
+	m_CTeleDisplay.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_ListTeleOutput,1);
 
-	m_CTeleDisplay.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_ListTeleOutput);
-	COLORREF color;
-	color = RGB(51, 153, 255);
-	m_ListTeleOutput.SetColColor(0, color);
+// 	COLORREF color;
+// 	color = RGB(51, 153, 255);
+// 	m_ListTeleOutput.SetColColor(0, color);
 // 	color = RGB(255, 0, 0);
 // 	m_ListTeleOutput.SetColColor(1, color);
 	UpdateData(FALSE);
 
 	///open can card
-// 	if (dlgCanConfig.DoModal() == IDOK)
-// 	{
-// 		m_pInterface->m_connect_CAN = dlgCanConfig.m_connect_CAN;
-// 		m_pInterface->m_connect_LVDS = dlgCanConfig.m_connect_LVDS;
-// 		m_pInterface->m_connect_RS422 = dlgCanConfig.m_connect_RS422;
-// 		m_pInterface->m_cannum = dlgCanConfig.m_cannum;
-// 	}
+	if (m_dlgCanConfig.DoModal() == IDOK)
+	{
+		m_pInterface->m_connect_CAN = m_dlgCanConfig.m_connect_CAN;
+		m_pInterface->m_connect_LVDS = m_dlgCanConfig.m_connect_LVDS;
+		m_pInterface->m_connect_RS422 = m_dlgCanConfig.m_connect_RS422;
+		m_pInterface->m_cannum = m_dlgCanConfig.m_cannum;
+
+
+	}
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
@@ -298,11 +309,6 @@ void CDlgCommandSheet::OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult)
 	if (iListIndex == -1)//新建指令
 	{
 		CDlgAddCommand dlgAddCommand(this, &cmd, 1);
-	//	CDlgAddCommand dlgAddCommand;
-// 		dlgAddCommand.m_pCMD = &m_CMDArray[m_iRealCmdCnt];
-// 		dlgAddCommand.m_bIsAddNewCmd = true;//控制addCommandsdlg不显示某个指令
-// 		dlgAddCommand.m_bHaveChosenCmd = false;//
-
 		if (dlgAddCommand.DoModal() == IDOK)
 		{
 
@@ -314,15 +320,10 @@ void CDlgCommandSheet::OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult)
 	else//修改指令
 	{
  		CDlgAddCommand dlgAddCommand(this, &m_cmdAddInfo[iListIndex], 0);
-//		CDlgAddCommand dlgAddCommand;
-// 		dlgAddCommand.m_pCMD = &m_CMDArray[iListIndex];
-// 		dlgAddCommand.m_bIsAddNewCmd = false;//控制addCommandsdlg显示m_CMDArray[iListIndex]指令
-// 		dlgAddCommand.m_bHaveChosenCmd = true;
-// 		CMD cmdTmp = m_CMDArray[iListIndex];//保存原来CMD指令
 		if (dlgAddCommand.DoModal() == IDOK)
 		{
-// 			m_ListCtrlCommand.DeleteItem(iListIndex);
-// 			AddCmdToList(&m_cmdAddInfo[iListIndex], iListIndex, 1);
+			m_ListCtrlCommand.DeleteItem(iListIndex);
+			AddCmdToList(&m_cmdAddInfo[iListIndex], iListIndex, 1);
 			//		m_iRealCmdCnt++;			
 		}
 		m_ListCtrlCommand.SetItemState(iListIndex, 0, -1);
@@ -724,11 +725,9 @@ int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
 					xmlRtn = CXML::xmlGetPropGBK(pNode, BAD_CAST("cal"));
 					if (xmlRtn)
 					{
-						length = strlen((char *)xmlRtn);
-						if (length > MAX_NAME_LENGTH){
-							length = MAX_NAME_LENGTH - 1;
-						}
-						memcpy(pCmdInfo->cal[idx], xmlRtn, length);
+						str = xmlRtn;
+						pCmdInfo->cal[idx] = strtol(str.Left(2), &endptr, 10);
+						xmlFree(xmlRtn);
 					}
 					xmlRtn = xmlGetProp(pNode, BAD_CAST("bitStart"));
 					pCmdInfo->bit_start[idx] = atoi((char *)xmlRtn);
@@ -827,9 +826,18 @@ void CDlgCommandSheet::Setteleinitvalue(TELEbuf telebuf)
 	while (k < telebuf.len)
 	{		
 		pCmdInfo = m_pMonitorInfo[idx];
+		if ((telebuf.len - k) < pCmdInfo->arg_byte_num)
+		{
+			memcpy(pCmdInfo->init_value, telebuf.Buf + k, telebuf.len - k);
+			k = telebuf.len;
+		}
+		else
+		{
+			memcpy(pCmdInfo->init_value, telebuf.Buf + k, pCmdInfo->arg_byte_num);
+			k += pCmdInfo->arg_byte_num;
+		}
 		
-		memcpy(pCmdInfo->init_value, telebuf.Buf + k, pCmdInfo->arg_byte_num);
-		k += pCmdInfo->arg_byte_num;
+		
 		idx++;
 	}
 }
@@ -844,24 +852,39 @@ void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
 		if (m_pInterface->m_telebuffull)
 		{
 			Setteleinitvalue(m_pInterface->m_telebuf);
-			m_CTeleDisplay.displayList(false, m_pMonitorInfo, m_MonitorCmdNum, &m_ListTeleOutput);
+			m_CTeleDisplay.displayList(false, m_pMonitorInfo, m_MonitorCmdNum, &m_ListTeleOutput,1);
+			m_CTeleDisplay.displayList(false, m_pMonitorInfo, m_MonitorCmdNum, &m_dlgRefreshsheet->m_ListRefresh,3);
 			m_pInterface->m_telebuffull = false;
 		}
-		m_pInterface->m_cantimebroadcast = true;
-		break;
-	case TIMERCANSENTELE:
-		m_pInterface->m_canteleframesend = true;
-		break;
-	case TIEMRLVDSSENDTELE:
-		m_pInterface->m_lvdsteleframesend = true;
-	case TIMERTELEDISPLAY://遥测显示
-		if (m_pInterface->m_telebuffull)
+		if (m_iscandatasend)
 		{
-			Setteleinitvalue(m_pInterface->m_telebuf);
-			m_CTeleDisplay.displayList(true, m_pMonitorInfo, m_MonitorCmdNum,&m_ListTeleOutput);
-			m_pInterface->m_telebuffull = false;
+			if (!(m_pInterface->m_canimmedieateSend || m_pInterface->m_caninjectTaskSend))
+			{
+				GetDlgItem(IDC_BUTTON_CANSEND)->EnableWindow(TRUE);
+				GetDlgItem(IDC_BUTTON_SINGELCMDSEDN)->EnableWindow(TRUE);
+				m_iscandatasend = FALSE;
+			}
+		}
+		if (m_islvdsdatasend)
+		{
+			if (!(m_pInterface->m_lvdsimmedieateSend || m_pInterface->m_lvdsinjectTaskSend))
+			{
+				GetDlgItem(IDC_BUTTONLVDSINJECTSEND)->EnableWindow(TRUE);
+				GetDlgItem(IDC_BUTTON_SINGELCMDSEDN)->EnableWindow(TRUE);
+				m_islvdsdatasend = FALSE;
+			}
 		}
 		
+		break;
+	case TIMERCANSENTELE:
+		m_pInterface->m_canteleframesend = true;		
+		break;
+	case TIEMRLVDSSENDTELE:		
+		m_pInterface->m_lvdsteleframesend = true;
+		break;
+	case TIMERBROADCAST://遥测显示
+		m_pInterface->m_cantimebroadcast = true;
+		break;
 	default:
 		break;
 	}
@@ -896,6 +919,7 @@ void CDlgCommandSheet::ShowInfo(CString str)
 void CDlgCommandSheet::OnCmdSend()
 {
 	// TODO: Add your command handler code here
+	
 	UpdateData(TRUE);
 	int i = 0, iListIndex = -1;
 	int cmdIdx;
@@ -907,6 +931,12 @@ void CDlgCommandSheet::OnCmdSend()
 		MessageBox("未选定指令！");
 		return;
 	}
+	if (!(m_checkSinglecmdlvds || m_checkSinglecmdcan))
+	{
+		MessageBox("请选择发送通道!", "警告");
+		return;
+	}
+	GetDlgItem(IDC_BUTTON_SINGELCMDSEDN)->EnableWindow(FALSE);
 	char *InjectionBuffer, *dataFramBuffer;
 	InjectionBuffer = (char *)malloc(MAX_INJECTTION);//
 	dataFramBuffer = (char *)malloc(MAX_INJECTTION);//最大数据长度
@@ -924,10 +954,16 @@ void CDlgCommandSheet::OnCmdSend()
 	
 	if (m_checkSinglecmdlvds)
 	{
+		GetDlgItem(IDC_BUTTONLVDSINJECTSEND)->EnableWindow(FALSE);
+		m_islvdsdatasend = TRUE;
+		m_pInterface->m_lvdsimmedieateSend = TRUE;
 		m_pInterface->getLVDSRS422injectbuf(LVDS_CARD_N1, injectcnt, dataFramBuffer, &m_pInterface->m_sendLVDSdatabuf);
 	}
 	if (m_checkSinglecmdcan)
 	{
+		m_iscandatasend = TRUE;
+		GetDlgItem(IDC_BUTTON_CANSEND)->EnableWindow(FALSE);
+		m_pInterface->m_canimmedieateSend = TRUE;
 		m_pInterface->getCANinjectbuf(injectcnt, dataFramBuffer, &m_pInterface->m_sendcandatabuf);
 		
 	}		
@@ -1595,26 +1631,18 @@ void CDlgCommandSheet::OnBnClickedButtonCmdsend()
 void CDlgCommandSheet::OnBnClickedButtonCansend()
 {
 	// TODO: Add your control notification handler code here
+
 	if (!(m_checkCANinjection || m_checkCANimmedieate))
 	{
 		MessageBox("请选择发送的指令类型!", "警告");
 		return;
 	}
+	GetDlgItem(IDC_BUTTON_CANSEND)->EnableWindow(FALSE);
+	GetDlgItem(IDC_BUTTON_SINGELCMDSEDN)->EnableWindow(FALSE);
+	m_iscandatasend = TRUE;
 	if (m_checkCANinjection)
-	{
-		char *injectbuf;
-		injectbuf = (char*)malloc(MAX_INJECTTION);
-		char filename[256];
-		sprintf(filename, (const char*)(LPCTSTR)m_editCANinjectdir);	
-		struct _stat info;
-		_stat(filename, &info);
-		int size = info.st_size;
-		FILE*fp;
-		fp = fopen(filename, "rb");
-		fread(injectbuf, 1, size, fp);
-		fclose(fp);
-		m_pInterface->getCANinjectbuf(size, injectbuf, &m_pInterface->m_sendcandatabuf);
-		free(injectbuf);
+	{	
+		m_pInterface->m_caninjectTaskSend = TRUE;
 	}
 	if (m_checkCANimmedieate)
 	{
@@ -1622,6 +1650,7 @@ void CDlgCommandSheet::OnBnClickedButtonCansend()
 		char buffer[CANSEGLENGTH];
 		memcpy(buffer, m_pCANcmdInfo[index]->init_value, m_pCANcmdInfo[index]->arg_byte_num);
 		m_pInterface->getCANimmediatebuf(m_pCANcmdInfo[index]->datatype[0], buffer, &m_pInterface->m_sendcandatabuf);
+		m_pInterface->m_canimmedieateSend = TRUE;
 	}
 //	m_pInterface->Releasethread(m_pInterface->m_hMutexCan);
 }
@@ -1629,27 +1658,18 @@ void CDlgCommandSheet::OnBnClickedButtonCansend()
 //lvds 注入
 void CDlgCommandSheet::OnBnClickedButtonlvdsinjectsend()
 {
-	// TODO: Add your control notification handler code here
+	// TODO: Add your control notification handler code here	
 	if (!(m_checkLVDSinjection || m_checkLVDSimmedieate))
 	{
 		MessageBox("请选择发送的指令类型!", "警告");
 		return;
 	}
+	GetDlgItem(IDC_BUTTONLVDSINJECTSEND)->EnableWindow(FALSE);
+	GetDlgItem(IDC_BUTTON_SINGELCMDSEDN)->EnableWindow(FALSE);
+	m_islvdsdatasend = TRUE;
 	if (m_checkLVDSinjection)
 	{
-		char filename[256];
-		sprintf(filename, (const char*)(LPCTSTR)m_editLVDSinjectdir);
-		char *injectbuf;
-		injectbuf = (char*)malloc(MAX_INJECTTION);
-		struct _stat info;
-		_stat(filename, &info);
-		int size = info.st_size;
-		FILE*fp;
-		fp = fopen(filename, "rb");
-		fread(injectbuf, 1, size, fp);
-		fclose(fp);
-		m_pInterface->getLVDSRS422injectbuf(LVDS_CARD_N1, size,injectbuf, &m_pInterface->m_sendLVDSdatabuf);
-		free(injectbuf);
+		m_pInterface->m_lvdsinjectTaskSend = TRUE;		
 	}
 	if (m_checkLVDSimmedieate)
 	{
@@ -1657,23 +1677,40 @@ void CDlgCommandSheet::OnBnClickedButtonlvdsinjectsend()
 		m_pInterface->m_sendLVDSdatabuf.sendLen = m_pLVDScmdInfo[index]->arg_byte_num;
 		m_pInterface->m_sendLVDSdatabuf.framecode = m_pLVDScmdInfo[index]->datatype[0];
 		memcpy(m_pInterface->m_sendLVDSdatabuf.buffer, m_pLVDScmdInfo[index]->init_value, m_pLVDScmdInfo[index]->arg_byte_num);
-		
+		m_pInterface->m_lvdsimmedieateSend = TRUE;
 	}
 }
 //can注入目录
 void CDlgCommandSheet::OnBnClickedButtonCaninjectfile()
 {
-	// TODO: Add your control notification handler code here
-	UpdateData(TRUE);
-	CFileDialog dlg(TRUE, NULL, NULL,
-		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ENABLESIZING | OFN_EXPLORER | OFN_NOCHANGEDIR,
-		"QCmdXml Files (*.bin)|*.bin||", NULL);
-	//		"QCmdList Files (*.cls)|*.cls|QCmdLog Files (*.clg)|*.clg|QCmdXml Files (*.xml)|*.xml||", NULL);
-	if (dlg.DoModal() != IDOK)
-		return;
+	m_pInterface->m_injectCANtaskcnt = 0;
+	size_t index;
+	CString cstrsucstring;
 
-	m_editCANinjectdir = dlg.GetPathName();
+	CFileDialog filedlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ALLOWMULTISELECT, _T("QCmd Files (*.bin;*.dat)|*.bin;*.dat|Task Files(*.txt;*.xml)|*.txt;*.xml||"));
+
+	TCHAR *pBuffer = new TCHAR[MAX_PATH*injectTaskNUM];//最多允许同时打开20个文件
+	filedlg.m_ofn.lpstrFile = pBuffer;
+	filedlg.m_ofn.nMaxFile = MAX_PATH * injectTaskNUM;
+	filedlg.m_ofn.lpstrFile[0] = '\0';
+
+	if (filedlg.DoModal() == IDOK)
+	{
+		CString cstrfilepath = _T("");
+		POSITION pos = filedlg.GetStartPosition();
+		while (pos != NULL)
+		{
+			cstrfilepath = filedlg.GetNextPathName(pos);//取得文件路径
+			m_editCANinjectdir += cstrfilepath;
+			m_editCANinjectdir += ";";
+			m_pInterface->m_injectCanfile[m_pInterface->m_injectCANtaskcnt] = cstrfilepath;
+			m_pInterface->m_injectCANtaskcnt++;
+		}
+
+	}
+
 	UpdateData(FALSE);
+
 }
 
 //lvds注入目录
@@ -1681,14 +1718,39 @@ void CDlgCommandSheet::OnBnClickedButtonLvdsinfile()
 {
 	// TODO: Add your control notification handler code here
 	UpdateData(TRUE);
-	CFileDialog dlg(TRUE, NULL, NULL,
-		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ENABLESIZING | OFN_EXPLORER | OFN_NOCHANGEDIR,
-		"QCmdXml Files (*.bin)|*.bin||", NULL);
-	//		"QCmdList Files (*.cls)|*.cls|QCmdLog Files (*.clg)|*.clg|QCmdXml Files (*.xml)|*.xml||", NULL);
-	if (dlg.DoModal() != IDOK)
-		return;
+	m_pInterface->m_injectLVDStaskcnt = 0;
+	size_t index;
+	CString cstrsucstring;
 
-	m_editLVDSinjectdir = dlg.GetPathName();
+	CFileDialog filedlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ALLOWMULTISELECT, _T("QCmd Files (*.bin;*.dat)|*.bin;*.dat|Task Files(*.txt;*.xml)|*.txt;*.xml||"));
+
+	TCHAR *pBuffer = new TCHAR[MAX_PATH * injectTaskNUM];//最多允许同时打开20个文件
+	filedlg.m_ofn.lpstrFile = pBuffer;
+	filedlg.m_ofn.nMaxFile = MAX_PATH * injectTaskNUM;
+	filedlg.m_ofn.lpstrFile[0] = '\0';
+
+	if (filedlg.DoModal() == IDOK)
+	{
+		CString cstrfilepath = _T("");
+		POSITION pos = filedlg.GetStartPosition();
+		while (pos != NULL)
+		{
+			cstrfilepath = filedlg.GetNextPathName(pos);//取得文件路径
+			m_editLVDSinjectdir += cstrfilepath;
+			m_editLVDSinjectdir += ";";
+			m_pInterface->m_injectLVDSfile[m_pInterface->m_injectCANtaskcnt] = cstrfilepath;
+			m_pInterface->m_injectLVDStaskcnt++;
+		}
+
+	}
+// 	CFileDialog dlg(TRUE, NULL, NULL,
+// 		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_ENABLESIZING | OFN_EXPLORER | OFN_NOCHANGEDIR,
+// 		"QCmdXml Files (*.bin)|*.bin||", NULL);
+// 	//		"QCmdList Files (*.cls)|*.cls|QCmdLog Files (*.clg)|*.clg|QCmdXml Files (*.xml)|*.xml||", NULL);
+// 	if (dlg.DoModal() != IDOK)
+// 		return;
+// 
+// 	m_editLVDSinjectdir = dlg.GetPathName();
 	UpdateData(FALSE);
 }
 
@@ -1771,6 +1833,7 @@ void CDlgCommandSheet::OnBnClickedButtonTaskdatadir()
 void CDlgCommandSheet::OnBnClickedButtonSingelcmdsedn()
 {
 	// TODO: Add your control notification handler code here
+	
 	OnCmdSend();
 }
 
@@ -1779,16 +1842,14 @@ void CDlgCommandSheet::OnBnClickedCheckCantele()
 {
 	// TODO: Add your control notification handler code here
 	m_checkCANtele = !m_checkCANtele;
-	if (m_checkCANtele)
-	{
-		m_pInterface->m_canteleframesend = true;
-	}
-	m_pInterface->m_lvdsteleframesend = false;
-	if (m_checkCANtele)
+		if (m_checkCANtele)
 	{
 		m_checkLVDStele = FALSE;
+		KillTimer(TIEMRLVDSSENDTELE);
+		SetTimer(TIMERCANSENTELE, 1000, NULL);
 	}
 	UpdateData(FALSE);
+	
 }
 
 
@@ -1796,15 +1857,18 @@ void CDlgCommandSheet::OnBnClickedCheckLvdstele()
 {
 	// TODO: Add your control notification handler code here
 	m_checkLVDStele = !m_checkLVDStele;
-	m_pInterface->m_canteleframesend = false;
-	if (m_checkLVDStele)
-	{
-		m_pInterface->m_lvdsteleframesend = true;
-	}
-	
+		
 	if (m_checkLVDStele)
 	{
 		m_checkCANtele = FALSE;
+		KillTimer(TIMERCANSENTELE);
+		SetTimer(TIEMRLVDSSENDTELE, 1000, NULL);
 	}
 	UpdateData(FALSE);
+	
+}
+void CDlgCommandSheet::setRefreshSheet(CDlgRefreshSheet *Refreshsheet)
+{
+	m_dlgRefreshsheet = Refreshsheet;
+	m_dlgRefreshsheet->m_CTeleDisplayfre.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_dlgRefreshsheet->m_ListRefresh,3);
 }

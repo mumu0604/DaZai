@@ -54,13 +54,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./libxml2/include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./libxml2/include;./lua/include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>./libxml2/lib;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libxml2.lib;zdll.lib;iconv.lib;controlcan.lib;LVDS_DLL.lib;</AdditionalDependencies>
+      <AdditionalLibraryDirectories>./libxml2/lib;./lua/lib;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2.lib;zdll.lib;iconv.lib;controlcan.lib;LVDS_DLL.lib;lua52.lib;</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -82,15 +82,15 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./libxml2/include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./libxml2/include;./lua/include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>./libxml2/lib;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libxml2.lib;zdll.lib;iconv.lib;controlcan.lib;LVDS_DLL.lib;</AdditionalDependencies>
+      <AdditionalLibraryDirectories>./libxml2/lib;./lua/lib;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2.lib;zdll.lib;iconv.lib;controlcan.lib;LVDS_DLL.lib;lua52.lib;</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -124,6 +124,7 @@
     <ClInclude Include="LVDS_DLL.h" />
     <ClInclude Include="ReplayConfig.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SMencryption.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TeleDisplay.h" />
@@ -143,6 +144,7 @@
     <ClCompile Include="Interface.cpp" />
     <ClCompile Include="ListCtrlCl.cpp" />
     <ClCompile Include="ReplayConfig.cpp" />
+    <ClCompile Include="SMencryption.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

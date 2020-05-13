@@ -41,21 +41,25 @@ enum
 	COL_ARG_LEN,
 	COL_ARG
 };
-#define MAX_ARG_NUM 256
-#define MAX_ARG_LENGTH	256
-#define MAX_NAME_LENGTH	256
-#define MAX_INJECTTION  17*1024*1024
-#define DEV_ID_KZ	0x03
-#define DEV_ID_MT	0x33
-#define DEV_ID_JF	0x93
-#define DEV_ID_XG	0xF3
+#define injectTaskNUM		  20
+#define MAX_ARG_NUM				256
+#define MAX_ARG_LENGTH			256
+#define MAX_NAME_LENGTH			256
+#define MAX_INJECTTION			17*1024*1024
+#define DEV_ID_KZ				0x03
+#define DEV_ID_MT				0x33
+#define DEV_ID_JF				0x93
+#define DEV_ID_XG				0xF3
 
-#define CAN_BUS_A	0x00
-#define CAN_BUS_B	0x30
-#define TELECOMMANDSHEET 0
-#define TELEREFRESHSHEET 1
-#define TELEREPALYCONFIG 2
+#define CAN_BUS_A				0x00
+#define CAN_BUS_B				0x30
+#define TELECOMMANDSHEET		0
+#define TELEREFRESHSHEET		1
+#define TELEREPALYCONFIG		2
 #define TELEFRAMELEN				512		//“£≤‚÷°≥§∂»
+
+
+
 
 typedef struct
 {
@@ -89,7 +93,7 @@ typedef struct
 	unsigned char Arg_CombxName[MAX_ARG_NUM][MAX_ARG_NUM][MAX_NAME_LENGTH];
 	unsigned char Arg_CombxCode[MAX_ARG_NUM][MAX_ARG_NUM];
 	unsigned char datatype[MAX_ARG_NUM];
-	unsigned char cal[MAX_ARG_NUM][MAX_NAME_LENGTH];;
+	unsigned char cal[MAX_NAME_LENGTH];;
 	int combcntNum[MAX_ARG_NUM];
 	unsigned char input_type[MAX_ARG_NUM];
 	unsigned char input_ctrl_index[MAX_ARG_NUM];

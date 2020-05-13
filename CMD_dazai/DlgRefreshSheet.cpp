@@ -87,7 +87,7 @@ BOOL CDlgRefreshSheet::OnInitDialog()
 	CDialogEx::OnInitDialog();
 
 	// TODO:  Add extra initialization here
-	m_CTeleDisplay.Open(&m_ListRefresh,TELEREFRESHSHEET);
+	m_CTeleDisplayfre.Open(&m_ListRefresh, TELEREFRESHSHEET);
 
 	get_control_original_proportion();
 	return TRUE;  // return TRUE unless you set the focus to a control

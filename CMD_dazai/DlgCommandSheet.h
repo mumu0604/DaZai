@@ -10,11 +10,12 @@
 #include "TeleDisplay.h"
 #include "Interface.h"
 #include "Ctelemetry.h"
+#include "DlgRefreshSheet.h"
 using namespace std;
 // CDlgCommandSheet dialog
 
 
-#define TIMERTELEDISPLAY			3			//遥测显示
+#define TIMERBROADCAST				3			//时间码发送
 #define TIMERCANSENTELE				1			//CAN TELE
 #define TIEMRLVDSSENDTELE			2			//LVDS TELE
 #define TIEMRCOMMANDTIEM			0			//LVDS TELE
@@ -94,7 +95,7 @@ public:
 	afx_msg void OnBnClickedButtonCmdsend();
 	int m_editCmdSendCnt;
 	int m_editCmdReactCnt;
-	CListCtrlCl m_ListTeleOutput;
+	CListCtrl m_ListTeleOutput;
 	int m_MonitorCmdNum;
 	int m_CANcmdNum;
 	int m_LVDScmdNum;
@@ -110,7 +111,7 @@ public:
 	afx_msg void OnBnClickedButtonCaninjectfile();
 	afx_msg void OnBnClickedButtonCaninfile2();
 	CString m_editCANinjectdir;
-	CString m_editLVDSinjectdir;
+	CString m_editLVDSinjectdir;	
 	BOOL m_checkCANinjection;
 	BOOL m_checkCANimmedieate;
 	BOOL m_checkLVDSinjection;
@@ -131,6 +132,9 @@ public:
 	short m_Editoffsettime3;
 	short m_Editdataaddr;
 	BOOL m_check_istaskdata;
+	BOOL m_iscandatasend;//can数据正在发送
+	BOOL m_islvdsdatasend;//lvds数据正在发送
+	CDlgRefreshSheet *m_dlgRefreshsheet;
 	afx_msg void OnBnClickedCheckIstaskdata();
 	afx_msg void OnBnClickedButtonTaskdatadir();
 	CString m_EditTaskInjectionDatafiel;
@@ -141,4 +145,5 @@ public:
 	BOOL m_checkLVDStele;
 	afx_msg void OnBnClickedCheckCantele();
 	afx_msg void OnBnClickedCheckLvdstele();
+	void setRefreshSheet(CDlgRefreshSheet *Refreshsheet);
 };

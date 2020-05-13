@@ -59,7 +59,7 @@ public:
 	CXML m_xml;
 	CMD_WN* m_pCmd_WN;
 	CDlgCommandSheet *m_pDlg;
-
+	int m_bNew = 0;
 //	CDlgCommandSheet *m_pDlg;
 	afx_msg void OnNMDblclkListAddcmd(NMHDR *pNMHDR, LRESULT *pResult);
 	void SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue);
@@ -68,6 +68,7 @@ public:
 	CDynEdit* CreatMyEdit(int id, int width, CString text, bool canEdit, int bitLength, double coef);
 	void InitUI(unsigned char *pCmd);
 	afx_msg void OnBnClickedOk();
+	void ReviseCmd();
 	BOOL m_CheckTimeFlag;
 	short m_editCMDoffsettime;
 };

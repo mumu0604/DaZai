@@ -33,6 +33,6 @@ public:
 	CRect m_rect;
 	list<control*> m_con_list;
 	virtual BOOL OnInitDialog();
-	CListCtrlCl m_ListRefresh;
-	CTeleDisplay m_CTeleDisplay;
+	CListCtrl m_ListRefresh;
+	CTeleDisplay m_CTeleDisplayfre;
 };
