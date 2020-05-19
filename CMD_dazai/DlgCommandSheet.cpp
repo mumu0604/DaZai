@@ -14,8 +14,6 @@ IMPLEMENT_DYNAMIC(CDlgCommandSheet, CDialogEx)
 
 CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CDlgCommandSheet::IDD, pParent)
-	, m_editCmdSendCnt(0)
-	, m_editCmdReactCnt(0)
 	, m_editCANinjectdir(_T(""))
 	, m_editLVDSinjectdir(_T(""))
 	, m_checkCANinjection(FALSE)
@@ -35,8 +33,9 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	, m_EditTaskInjectionDatafiel(_T(""))
 	, m_checkSinglecmdlvds(FALSE)
 	, m_checkSinglecmdcan(TRUE)
-	, m_checkCANtele(TRUE)
+	, m_checkCANtele(FALSE)
 	, m_checkLVDStele(FALSE)
+	, m_edit_TaskT0Time(0)
 {
 	m_iRealCmdCnt = 0;
 	m_mappackType["添加业务任务"] = 0x40;
@@ -59,8 +58,6 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_CONTROL, m_ListCtrlCommand);
 	DDX_Control(pDX, IDC_EDIT_CMDSEND_OUTPUT, m_pEditCmdSend);
-	DDX_Text(pDX, IDC_EDIT_CMDSENDNUM, m_editCmdSendCnt);
-	DDX_Text(pDX, IDC_EDIT_CMDREACTNUM, m_editCmdReactCnt);
 	DDX_Control(pDX, IDC_LIST_TELEOUTPUT, m_ListTeleOutput);
 	DDX_Control(pDX, IDC_COMBO_PACKTYPE, m_ComboBoxPackType);
 	DDX_Control(pDX, IDC_COMBO_CANCMD, m_ComboCancmd);
@@ -86,6 +83,8 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_CHECK_LISTCMDCAN, m_checkSinglecmdcan);
 	DDX_Check(pDX, IDC_CHECK_CANTELE, m_checkCANtele);
 	DDX_Check(pDX, IDC_CHECK_LVDSTELE, m_checkLVDStele);
+	DDX_Text(pDX, IDC_EDIT_TASKTOTIME, m_edit_TaskT0Time);
+	DDX_Control(pDX, IDC_EDIT_OUTPUTREPORT, m_Edit_reportOutput);
 }
 
 
@@ -117,6 +116,7 @@ BEGIN_MESSAGE_MAP(CDlgCommandSheet, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_SINGELCMDSEDN, &CDlgCommandSheet::OnBnClickedButtonSingelcmdsedn)
 	ON_BN_CLICKED(IDC_CHECK_CANTELE, &CDlgCommandSheet::OnBnClickedCheckCantele)
 	ON_BN_CLICKED(IDC_CHECK_LVDSTELE, &CDlgCommandSheet::OnBnClickedCheckLvdstele)
+	ON_BN_CLICKED(IDC_BUTTON_CURRENTTIME, &CDlgCommandSheet::OnBnClickedButtonCurrenttime)
 END_MESSAGE_MAP()
 
 
@@ -265,12 +265,7 @@ BOOL CDlgCommandSheet::OnInitDialog()
 		m_ComboLVDScmd.AddString(str);
 	}
 
-	m_ComboBoxPackType.SetCurSel(3);
-	m_ComboCancmd.SetCurSel(0);
-	m_ComboLVDScmd.SetCurSel(0);
-	m_ComboBoxPackType.SetItemHeight(-1, 25);
-	m_ComboCancmd.SetItemHeight(-1, 25);
-	m_ComboLVDScmd.SetItemHeight(-1, 25);
+	
 	m_CTeleDisplay.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_ListTeleOutput,1);
 
 // 	COLORREF color;
@@ -287,10 +282,14 @@ BOOL CDlgCommandSheet::OnInitDialog()
 		m_pInterface->m_connect_LVDS = m_dlgCanConfig.m_connect_LVDS;
 		m_pInterface->m_connect_RS422 = m_dlgCanConfig.m_connect_RS422;
 		m_pInterface->m_cannum = m_dlgCanConfig.m_cannum;
-
-
 	}
-
+	Sleep(500);
+	m_ComboBoxPackType.SetCurSel(3);
+	m_ComboCancmd.SetCurSel(0);
+	m_ComboLVDScmd.SetCurSel(0);
+	m_ComboBoxPackType.SetItemHeight(-1, 25);
+	m_ComboCancmd.SetItemHeight(-1, 25);
+	m_ComboLVDScmd.SetItemHeight(-1, 25);
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -849,6 +848,10 @@ void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
 	{
 	case TIEMRCOMMANDTIEM:
 		SetCurrentTimer();
+		m_pEditCmdSend.SetWindowTextA(gstr_output_send);
+		m_pEditCmdSend.LineScroll(m_pEditCmdSend.GetLineCount(), 0);
+		m_Edit_reportOutput.SetWindowTextA(gstr_outputReport);
+		m_Edit_reportOutput.LineScroll(m_Edit_reportOutput.GetLineCount(), 0);
 		if (m_pInterface->m_telebuffull)
 		{
 			Setteleinitvalue(m_pInterface->m_telebuf);
@@ -944,6 +947,8 @@ void CDlgCommandSheet::OnCmdSend()
 	Getinjectionpara(&Injectionpara);
 	CMDbuf cmdbuf;
 	bool bret = GetCMDsingle(&cmdbuf);
+	FILE *fp;
+	fp = fopen("", "wb");
 	if (!bret)
 	{
 		free(InjectionBuffer);
@@ -963,7 +968,7 @@ void CDlgCommandSheet::OnCmdSend()
 	{
 		m_iscandatasend = TRUE;
 		GetDlgItem(IDC_BUTTON_CANSEND)->EnableWindow(FALSE);
-		m_pInterface->m_canimmedieateSend = TRUE;
+		m_pInterface->m_canimmedieateSend = TRUE;	
 		m_pInterface->getCANinjectbuf(injectcnt, dataFramBuffer, &m_pInterface->m_sendcandatabuf);
 		
 	}		
@@ -1871,4 +1876,14 @@ void CDlgCommandSheet::setRefreshSheet(CDlgRefreshSheet *Refreshsheet)
 {
 	m_dlgRefreshsheet = Refreshsheet;
 	m_dlgRefreshsheet->m_CTeleDisplayfre.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_dlgRefreshsheet->m_ListRefresh,3);
+}
+
+void CDlgCommandSheet::OnBnClickedButtonCurrenttime()
+{
+	// TODO: Add your control notification handler code here
+	UpdateData(TRUE);
+	time_t nowtimestart = time(NULL);
+	m_pInterface->m_taskT0startcnt = m_edit_TaskT0Time;
+	m_pInterface->m_taskT0time = nowtimestart;
+
 }

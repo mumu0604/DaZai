@@ -93,8 +93,6 @@ public:
 	CString m_StrCMDsend;
 	CEdit m_pEditCmdSend;
 	afx_msg void OnBnClickedButtonCmdsend();
-	int m_editCmdSendCnt;
-	int m_editCmdReactCnt;
 	CListCtrl m_ListTeleOutput;
 	int m_MonitorCmdNum;
 	int m_CANcmdNum;
@@ -146,4 +144,7 @@ public:
 	afx_msg void OnBnClickedCheckCantele();
 	afx_msg void OnBnClickedCheckLvdstele();
 	void setRefreshSheet(CDlgRefreshSheet *Refreshsheet);
+	afx_msg void OnBnClickedButtonCurrenttime();
+	int m_edit_TaskT0Time;
+	CEdit m_Edit_reportOutput;
 };

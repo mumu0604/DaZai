@@ -60,7 +60,8 @@ enum
 
 
 
-
+extern CString gstr_output_send;
+extern CString gstr_outputReport;
 typedef struct
 {
 	char Buf[TELEFRAMELEN];
