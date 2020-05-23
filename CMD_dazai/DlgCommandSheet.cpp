@@ -117,6 +117,7 @@ BEGIN_MESSAGE_MAP(CDlgCommandSheet, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECK_CANTELE, &CDlgCommandSheet::OnBnClickedCheckCantele)
 	ON_BN_CLICKED(IDC_CHECK_LVDSTELE, &CDlgCommandSheet::OnBnClickedCheckLvdstele)
 	ON_BN_CLICKED(IDC_BUTTON_CURRENTTIME, &CDlgCommandSheet::OnBnClickedButtonCurrenttime)
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 
@@ -817,7 +818,7 @@ void CDlgCommandSheet::SetCurrentTimer()
 		t.wMilliseconds);
 	GetDlgItem(IDC_BUTTON_CURRENTTIME)->SetWindowText(strBuf);
 }
-void CDlgCommandSheet::Setteleinitvalue(TELEbuf telebuf)
+void CDlgCommandSheet::Setteleinitvalue(RecvScanBuf telebuf)
 {
 	CmdInfo *pCmdInfo;
 	int k = 0;
@@ -1675,6 +1676,7 @@ void CDlgCommandSheet::OnBnClickedButtonlvdsinjectsend()
 	if (m_checkLVDSinjection)
 	{
 		m_pInterface->m_lvdsinjectTaskSend = TRUE;		
+		m_pInterface->m_iswaitresponse = TRUE;
 	}
 	if (m_checkLVDSimmedieate)
 	{
@@ -1847,11 +1849,15 @@ void CDlgCommandSheet::OnBnClickedCheckCantele()
 {
 	// TODO: Add your control notification handler code here
 	m_checkCANtele = !m_checkCANtele;
-		if (m_checkCANtele)
+	if (m_checkCANtele)
 	{
 		m_checkLVDStele = FALSE;
 		KillTimer(TIEMRLVDSSENDTELE);
 		SetTimer(TIMERCANSENTELE, 1000, NULL);
+	}
+	else
+	{
+		KillTimer(TIMERCANSENTELE);
 	}
 	UpdateData(FALSE);
 	
@@ -1869,6 +1875,10 @@ void CDlgCommandSheet::OnBnClickedCheckLvdstele()
 		KillTimer(TIMERCANSENTELE);
 		SetTimer(TIEMRLVDSSENDTELE, 1000, NULL);
 	}
+	else
+	{
+		KillTimer(TIEMRLVDSSENDTELE);
+	}
 	UpdateData(FALSE);
 	
 }
@@ -1885,5 +1895,14 @@ void CDlgCommandSheet::OnBnClickedButtonCurrenttime()
 	time_t nowtimestart = time(NULL);
 	m_pInterface->m_taskT0startcnt = m_edit_TaskT0Time;
 	m_pInterface->m_taskT0time = nowtimestart;
+
+}
+
+
+void CDlgCommandSheet::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+	m_pInterface->closelogFile();
+	// TODO: Add your message handler code here
 
 }

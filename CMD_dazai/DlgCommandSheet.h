@@ -73,7 +73,7 @@ public:
 	int getcmdinjectiondata(CMDbuf cmdbuf, char *InjectionBuffer, char *dataFramBuffer);
 	void SaveToPLD(CFile *pldFile);
 	void LoadFromPLD(CString fileName);
-	void Setteleinitvalue(TELEbuf telebuf);
+	void Setteleinitvalue(RecvScanBuf telebuf);
 	SYSTEMTIME m_GPSTimeNowday;
 	CMenu m_menu;
 	unsigned char m_bus_flag;
@@ -147,4 +147,5 @@ public:
 	afx_msg void OnBnClickedButtonCurrenttime();
 	int m_edit_TaskT0Time;
 	CEdit m_Edit_reportOutput;
+	afx_msg void OnDestroy();
 };
