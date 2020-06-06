@@ -111,7 +111,7 @@ BOOL CCMD_dazaiDlg::OnInitDialog()
 	m_RefreshSheet.Create(IDD_DLGREFRESHSHEET, &m_CMD_tab);
 	m_ReplayConfig.Create(IDD_DLGREPLAYSHEET, &m_CMD_tab);
 	m_PlotSheet.Create(IDD_DLGPLOTSHEET, &m_CMD_tab);
-	m_CommandSheet.setRefreshSheet(&m_RefreshSheet);
+	m_CommandSheet.setRefreshSheet(&m_RefreshSheet,&m_ReplayConfig);
 	//设定在Tab内显示的范围
 	CRect rc;
 	m_CMD_tab.GetClientRect(rc);

@@ -123,7 +123,6 @@ END_MESSAGE_MAP()
 
 // CDlgCommandSheet message handlers
 
-
 void CDlgCommandSheet::OnSize(UINT nType, int cx, int cy)
 {
 	CDialogEx::OnSize(nType, cx, cy);
@@ -145,6 +144,7 @@ void CDlgCommandSheet::OnSize(UINT nType, int cx, int cy)
 			rect.bottom = (*it)->scale[3] * cy;
 			pWnd->MoveWindow(rect);//设置控件大小	
 		}
+	
 	}
 	GetClientRect(&m_rect);//将变化后的对话框大小设为旧大小
 	// TODO: Add your message handler code here
@@ -225,10 +225,11 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	get_control_original_proportion();
 	m_xml.Open("monitor.xml");
 	m_MonitorCmdNum=GetMonitorxmlInfo(m_pMonitorInfo);
+	
 //	memcpy(m_CTeleDisplay.m_pMonitorInfo, m_pMonitorInfo, 256 * sizeof(CmdInfo));
 //	m_CTeleDisplay.m_pMonitorInfo = m_pMonitorInfo;
 	m_xml.Open("commandsCan.xml");
-	m_CANcmdNum = GetMonitorxmlInfo(m_pCANcmdInfo);
+	m_CANcmdNum = GetMonitorxmlInfo(m_pCANcmdInfo);	
 	m_xml.Open("commands_LVDS.xml");
 	m_LVDScmdNum = GetMonitorxmlInfo(m_pLVDScmdInfo);
 
@@ -356,6 +357,40 @@ CString CDlgCommandSheet::GetAbsTime(__int64 sec)
 	strBuf1 += strBuf2;
 	return strBuf1;
 }
+void CDlgCommandSheet::ExtractArgValue1(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length)
+{
+	int i;
+
+	int byteStart = bitStart / 8;
+	char *endptr;
+	bitStart &= 7;
+	CString strBuf;
+	if (!bitStart){
+		for (i = 0; i < length / 8; i++){
+			//			pDst[i] = pSrc[i + byteStart];
+			strBuf.Format(strBuf + "%02x", pSrc[i + byteStart]);
+		}
+		//		length &= 7;
+		//		if (length){
+		//			pDst[i] = pSrc[i + byteStart] & (0xFF << (8 - length));
+		//		}
+		unsigned int arg = strtoul(strBuf, &endptr, 16);
+		memcpy(pDst, &arg, length / 8);
+		return;
+	}
+
+	for (i = 0; i < length / 8; i++){
+		pDst[i] = (pSrc[i + byteStart] << bitStart) | pSrc[i + byteStart + 1] >> (8 - bitStart);
+	}
+	length &= 7;
+	if (length){
+		pDst[i] = (pSrc[i + byteStart] << bitStart);
+		if (length + bitStart > 8){
+			pDst[i] |= pSrc[i + byteStart + 1] >> (8 - bitStart);
+		}
+		pDst[i] &= (0xFF << (8 - length));
+	}
+}
 void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 {
 	int i, j, k;
@@ -429,7 +464,7 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 
 	strBuf = "";
 	for (j = 0; j < pCmdInfo->arg_num; j++){
-		m_Ctelemetry.ExtractArgValue(temp, pAddedCmd->args, pCmdInfo->bit_start[j], pCmdInfo->arg_length[j]);
+		ExtractArgValue1(temp, pAddedCmd->args, pCmdInfo->bit_start[j], pCmdInfo->arg_length[j]);
 		for (k = 0; k < pCmdInfo->arg_length[j] / 8; k++){
 			strBuf1.Format("%02X", temp[k]);
 			strBuf += strBuf1;
@@ -482,9 +517,9 @@ xmlXPathObjectPtr CDlgCommandSheet::LocateCommand(unsigned char dev_id, unsigned
 	}
 	return LocateXPath(xpath_expr);
 }
-void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[256])
+void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[100])
 {
-	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* 256);
+	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* 100);
 	xmlXPathObjectPtr xpathObj;
 	char xpath_expr[200];
 	int i, j;
@@ -579,16 +614,19 @@ void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[256])
 					xmlRtn = xmlGetProp(pNode, BAD_CAST("initValue"));
 					strTemp = xmlRtn;
 					xmlFree(xmlRtn);
-					strTemp.GetBufferSetLength((pCmdInfo->arg_length[idx] + 7) / 8 * 2);
-					for (j = 0; j < pCmdInfo->arg_length[idx] / 8; j++){
-						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
-					}
-					if (pCmdInfo->arg_length[idx] & 0x7){
-						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
-						if (pCmdInfo->input_type[idx] == 0){
-							temp[j] <<= (8 - (pCmdInfo->arg_length[idx] & 0x7));
-						}
-					}
+// 					strTemp.GetBufferSetLength((pCmdInfo->arg_length[idx] + 7) / 8 * 2);
+// 					for (j = 0; j < pCmdInfo->arg_length[idx] / 8; j++){
+// 						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
+// 					}
+// 					if (pCmdInfo->arg_length[idx] & 0x7){
+// 						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
+// 						if (pCmdInfo->input_type[idx] == 0){
+// 							temp[j] <<= (8 - (pCmdInfo->arg_length[idx] & 0x7));
+// 						}
+// 					}
+
+					unsigned int arg = strtoul(strTemp, &endptr, 16);
+					memcpy(temp, &arg, (pCmdInfo->arg_length[idx] + 7) / 8);
 					m_Ctelemetry.InsertArgValue(pCmdInfo->init_value, temp, pCmdInfo->bit_start[idx], pCmdInfo->arg_length[idx]);
 					if (pCmdInfo->input_type[idx] == 0){
 						pCmdInfo->input_ctrl_index[idx] = combo_index;
@@ -618,9 +656,9 @@ void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[256])
 // 		}
 // 	}
 }
-int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256])
+int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[50])
 {
-	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* 256);
+	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* 50);
 	xmlXPathObjectPtr xpathObj;
 	char xpath_expr[200];
 	int i, j;
@@ -807,15 +845,20 @@ void CDlgCommandSheet::OnBnClickedButtonCanpara()
 
 void CDlgCommandSheet::SetCurrentTimer()
 {
+	time_t nowtime;
+	nowtime = time(NULL);
+	nowtime = m_edit_TaskT0Time + nowtime - m_pInterface->m_taskT0time;
 	CString strBuf;
+	strBuf.Format("%d", nowtime);
 	SYSTEMTIME t;
-	GetLocalTime(&t);
-	strBuf.Format("%03d日%02d时%02d分%02d秒%03d毫秒",
-		t.wDay-m_GPSTimeNowday.wDay,
-		t.wHour,
-		t.wMinute,
-		t.wSecond,
-		t.wMilliseconds);
+// 	t = m_CTeleDisplay.TimetToSystemTime(nowtime);
+// //	GetLocalTime(&t);
+// 	strBuf.Format("%03d日%02d时%02d分%02d秒%03d毫秒",
+// 		t.wDay-m_GPSTimeNowday.wDay,
+// 		t.wHour,
+// 		t.wMinute,
+// 		t.wSecond,
+// 		t.wMilliseconds);
 	GetDlgItem(IDC_BUTTON_CURRENTTIME)->SetWindowText(strBuf);
 }
 void CDlgCommandSheet::Setteleinitvalue(RecvScanBuf telebuf)
@@ -1195,7 +1238,7 @@ void CDlgCommandSheet::LoadFromPLD(CString fileName)
 	CMD_WN cmd;
 	CmdInfo *pCmdInfo;
 
-	unsigned char buf[32];
+	unsigned char buf[64];
 	int cnt, idx = 0, iPos;
 
 	cnt = pldFile.GetLength();
@@ -1203,7 +1246,7 @@ void CDlgCommandSheet::LoadFromPLD(CString fileName)
 	// 		return;
 	// 	}
 
-	cnt >>= 5;
+	cnt >>= 6;
 	//	pldFile.Read(buf, 8);//度xw_header[8]
 	unsigned short crc = 0;
 
@@ -1223,7 +1266,7 @@ void CDlgCommandSheet::LoadFromPLD(CString fileName)
 
 
 	for (int i = 0; i < cnt; i++){
-		pldFile.Read(buf, 32);
+		pldFile.Read(buf, 64);
 		iPos = 4;
 		for (int j = 0; j < (buf[3] & 0xF); j++){
 			cmd.dev_id = buf[0];
@@ -1284,7 +1327,7 @@ void CDlgCommandSheet::SaveToPLD(CFile *pldFile)
 	char buffer1[64];
 	for (i = 0; i < cnt; i++){
 		buffer = (char*)m_ListCtrlCommand.GetItemData(i);
-		memcpy(buffer1, buffer, 40);
+		memcpy(buffer1, buffer, 64);
 		pCmd = (CMD_WN *)m_ListCtrlCommand.GetItemData(i);
 		pCmdInfo = m_pCmdInfo[pCmd->cmd_id & 0xFF];
 		if (!pCmdInfo){
@@ -1325,14 +1368,14 @@ void CDlgCommandSheet::SaveToPLD(CFile *pldFile)
 				}
 				memset(pBuf + byte32B, 0x5A, left32B);
 				idx32B++;
-				pBuf += 32;
+				pBuf += 64;
 			}
 
 			//2. new 32B
 			eventNum32B = 0;//指令计数
 			dev32B = pCmd->dev_id;
 			bus32B = pCmd->bus_flag;
-			left32B = 27;
+			left32B = 59;////////////////////////////////////////////////
 			byte32B = 4;
 			time32B = cmdTimeFlag;
 		}
@@ -1379,33 +1422,33 @@ void CDlgCommandSheet::SaveToPLD(CFile *pldFile)
 			continue;
 		}
 		if (cnt32BDev[i] == 1){
-			pBuf1[2 + start32BDev[i] * 32] = pBuf1[2 + start32BDev[i] * 32] & 0xF0;
+			pBuf1[2 + start32BDev[i] * 64] = pBuf1[2 + start32BDev[i] * 64] & 0xF0;
 		}
 		else{
-			pBuf1[2 + start32BDev[i] * 32] = (pBuf1[2 + start32BDev[i] * 32] & 0xF0) | 0x03;
-			pBuf1[2 + end32BDev[i] * 32] = (pBuf1[2 + end32BDev[i] * 32] & 0xF0) | 0x0F;
+			pBuf1[2 + start32BDev[i] * 64] = (pBuf1[2 + start32BDev[i] * 64] & 0xF0) | 0x03;
+			pBuf1[2 + end32BDev[i] * 64] = (pBuf1[2 + end32BDev[i] * 64] & 0xF0) | 0x0F;
 		}
 	}
 
 	pBuf = pBuf1;
 	for (i = 0; i < idx32B; i++){
 		sum = 0;
-		for (j = 0; j < 31; j++){
+		for (j = 0; j < 63; j++){
 			sum += pBuf[j];
 		}
-		pBuf[31] = sum;
-		pBuf += 32;
+		pBuf[63] = sum;
+		pBuf += 64;
 	}
 
 
 	unsigned short crc;
 	pBuf = pBuf1;
-	crc = CRC16((unsigned char *)pBuf, 0, idx32B * 32);
+	crc = CRC16((unsigned char *)pBuf, 0, idx32B * 64);
 	// 	pBuf[idx32B * 32] = (crc & 0xFF00) >> 8;
 	// 	pBuf[idx32B * 32 + 1] = crc & 0xFF;
 
 
-	i = idx32B * 32 + 2;
+	i = idx32B * 64 + 2;
 	xw_header[0] = (i & 0xFF000000) >> 24;
 	xw_header[1] = (i & 0xFF0000) >> 16;
 	xw_header[2] = (i & 0xFF00) >> 8;
@@ -1413,7 +1456,7 @@ void CDlgCommandSheet::SaveToPLD(CFile *pldFile)
 	xw_header[4] = 0x01;
 	xw_header[5] = 0x24;
 	crc = 0;
-	for (i = 0; i < idx32B * 32 + 2; i++){
+	for (i = 0; i < idx32B * 64 + 2; i++){
 		crc += (unsigned char)(pBuf[i]);
 	}
 	xw_header[6] = (crc & 0xFF00) >> 8;
@@ -1421,7 +1464,7 @@ void CDlgCommandSheet::SaveToPLD(CFile *pldFile)
 
 	//	pldFile->Write(xw_header, 8);
 	//	pldFile->Write(pBuf, idx32B * 32 + 2);
-	pldFile->Write(pBuf, idx32B * 32);	
+	pldFile->Write(pBuf, idx32B * 64);	
 	free(pBuf1);
 	//	m_Str_send += "\r\n";
 }
@@ -1555,7 +1598,7 @@ void CDlgCommandSheet::Getinjectionpara(InjectionInfo *Injectionpara)
 	{
 		time_t nowtime;
 		nowtime = time(NULL);
-		m_Editstarttime = nowtime;
+		m_Editstarttime = m_edit_TaskT0Time + nowtime - m_pInterface->m_taskT0time;;
 	}
 	m_ComboBoxPackType.GetWindowText(strtmp);
 	Injectionpara->type = m_mappackType[strtmp];
@@ -1858,6 +1901,7 @@ void CDlgCommandSheet::OnBnClickedCheckCantele()
 	else
 	{
 		KillTimer(TIMERCANSENTELE);
+		m_pInterface->m_canteleframesend = false;
 	}
 	UpdateData(FALSE);
 	
@@ -1877,14 +1921,19 @@ void CDlgCommandSheet::OnBnClickedCheckLvdstele()
 	}
 	else
 	{
+		m_pInterface->m_lvdsteleframesend = false;
 		KillTimer(TIEMRLVDSSENDTELE);
+
 	}
 	UpdateData(FALSE);
 	
 }
-void CDlgCommandSheet::setRefreshSheet(CDlgRefreshSheet *Refreshsheet)
+void CDlgCommandSheet::setRefreshSheet(CDlgRefreshSheet *Refreshsheet, CReplayConfig *ReplayConfig)
 {
 	m_dlgRefreshsheet = Refreshsheet;
+	m_CReplayConfig = ReplayConfig;
+	strcpy((char*)m_CReplayConfig->m_ptelecmdInfo, (char*)m_pMonitorInfo);
+	m_CReplayConfig->m_MonitorCmdNum = m_MonitorCmdNum;
 	m_dlgRefreshsheet->m_CTeleDisplayfre.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_dlgRefreshsheet->m_ListRefresh,3);
 }
 
@@ -1896,6 +1945,32 @@ void CDlgCommandSheet::OnBnClickedButtonCurrenttime()
 	m_pInterface->m_taskT0startcnt = m_edit_TaskT0Time;
 	m_pInterface->m_taskT0time = nowtimestart;
 
+
+// 	CRect rect(m_rect);
+// 	int width = 100;
+// 	if (width < m_rect.Width())
+// 	{
+// 		rect.right = rect.left + width;
+// 		m_rect.left += width;
+// 	}
+// 	else//换行
+// 	{
+// 		m_rect.left = CANVAS_LEFTTOPx;
+// 		m_rect.top += LINEHEIGHT;
+// 		m_rect.bottom += LINEHEIGHT;
+// 
+// 		rect.left = CANVAS_LEFTTOPx;
+// 		rect.right = rect.left + width;
+// 		rect.top = rect.top + LINEHEIGHT;
+// 		rect.bottom = rect.top + LINEHEIGHT;
+// 	}
+// 	rect.bottom += COMBOBOXHEIGHT;
+// 	CDynComboBox *pComboBox = new CDynComboBox(987);
+// 	pComboBox->Create(WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, rect, this, 102);
+// 	pComboBox->AddString("1");
+// 	pComboBox->AddString("1");
+// 	pComboBox->AddString("1");
+// 	pComboBox->AddString("1");
 }
 
 

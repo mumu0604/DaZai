@@ -208,7 +208,8 @@ void CDlgAddCommand::SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue
 	}
 
 	for (i = 0; i < pCmdInfo->arg_num; i++){
-		m_pDlg->m_Ctelemetry.ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
+//		m_pDlg->m_Ctelemetry.ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
+		m_pDlg->ExtractArgValue1(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 		strArg = "";
 		for (j = 0; j < pCmdInfo->arg_length[i] / 8; j++){
 			strBuf.Format("%02X", temp[j]);
@@ -471,17 +472,35 @@ void CDlgAddCommand::OnBnClickedOk()
 		}
 		iPosition = 0;
 		strArg.GetBufferSetLength((pCmdInfo->arg_length[i] + 7) / 8 * 2);
-		for (j = 0; j < pCmdInfo->arg_length[i] / 8; j++){
-			temp[j] = strtol(strArg.Mid(iPosition, 2), &endptr, 16);
-			iPosition += 2;
-		}
-		if (pCmdInfo->arg_length[i] & 0x7){
-			temp[j] = strtol(strArg.Mid(iPosition, 2), &endptr, 16);
-			iPosition += 2;
-			if (pCmdInfo->input_type[i] == 0){
-				temp[j] <<= (8 - (pCmdInfo->arg_length[i] & 0x7));
-			}
-		}
+
+		unsigned int arg = strtoul(strArg, &endptr, 16);
+		memcpy(temp, &arg, (pCmdInfo->arg_length[i] + 7) / 8);
+// 		if (pCmdInfo->arg_length[i] & 0x7){
+// 			if (pCmdInfo->input_type[i] == 0){
+// 				arg = arg << (8 - (pCmdInfo->arg_length[i] & 0x7));
+// 			}
+// 		}
+		
+
+// 		for (j = 0; j < pCmdInfo->arg_length[i] / 8; j++){
+// 			temp[j] = strtol(strArg.Mid(iPosition, 2), &endptr, 16);
+// 			iPosition += 2;
+// 		}
+// 		if (pCmdInfo->arg_length[i] & 0x7){
+// 			temp[j] = strtol(strArg.Mid(iPosition, 2), &endptr, 16);
+// 			iPosition += 2;
+// 			if (pCmdInfo->input_type[i] == 0){
+// 				temp[j] <<= (8 - (pCmdInfo->arg_length[i] & 0x7));
+// 			}
+// 		}
+// 		//int len;
+// 		//unsigned char tmp;
+// 		//len = (pCmdInfo->arg_length[i] + 7) / 8;
+// 		//for (j = 0; j < len / 2; j++){
+// 		//	tmp = temp[j];
+// 		//	temp[j] = temp[len - j - 1];
+// 		//	temp[len - j - 1] = tmp;
+// 		//}
 		m_pDlg->m_Ctelemetry.InsertArgValue(m_pCmd_WN->args, temp, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 	}
 	CDialogEx::OnOK();

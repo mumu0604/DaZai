@@ -11,6 +11,7 @@
 #include "Interface.h"
 #include "Ctelemetry.h"
 #include "DlgRefreshSheet.h"
+#include "ReplayConfig.h"
 using namespace std;
 // CDlgCommandSheet dialog
 
@@ -52,16 +53,16 @@ public:
 	CXML m_xmlMonitor;
 	int m_iRealCmdCnt;
 	CMD_WN m_cmdAddInfo[MAXCOMMAND];
-	CmdInfo *m_pCmdInfo[256];
-	CmdInfo *m_pMonitorInfo[256];
-	CmdInfo *m_pCANcmdInfo[256];
-	CmdInfo *m_pLVDScmdInfo[256];
+	CmdInfo *m_pCmdInfo[100];
+	CmdInfo *m_pMonitorInfo[50];
+	CmdInfo *m_pCANcmdInfo[50];
+	CmdInfo *m_pLVDScmdInfo[50];
 	map<CString, int> m_mappackType;
 
 	xmlXPathObjectPtr LocateXPath(char xpath_expr[]);
 	xmlXPathObjectPtr LocateCommand(unsigned char dev_id, unsigned char cmd_id);
-	void GetCmdInfo(CmdInfo *m_pCmdInfo[256]);
-	int GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[256]);
+	void GetCmdInfo(CmdInfo *m_pCmdInfo[100]);
+	int GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[50]);
 //	void InsertArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
 	afx_msg void OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedButtonCanpara();
@@ -89,6 +90,7 @@ public:
 	afx_msg void OnBnClickedButtonOutput();
 	void AddCmdToList(CMD_WN *pCmd, int index, int bNew);
 	CString GetAbsTime(__int64 sec);
+	void ExtractArgValue1(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
 	void ShowInfo(CString str);
 	CString m_StrCMDsend;
 	CEdit m_pEditCmdSend;
@@ -100,6 +102,7 @@ public:
 	CTeleDisplay m_CTeleDisplay;
 	Ctelemetry m_Ctelemetry;
 	CInterface *m_pInterface;
+	
 	CComboBox m_ComboBoxPackType;
 	CComboBox m_ComboCancmd;
 	CComboBox m_ComboLVDScmd;
@@ -133,6 +136,7 @@ public:
 	BOOL m_iscandatasend;//can数据正在发送
 	BOOL m_islvdsdatasend;//lvds数据正在发送
 	CDlgRefreshSheet *m_dlgRefreshsheet;
+	CReplayConfig *m_CReplayConfig;
 	afx_msg void OnBnClickedCheckIstaskdata();
 	afx_msg void OnBnClickedButtonTaskdatadir();
 	CString m_EditTaskInjectionDatafiel;
@@ -143,7 +147,7 @@ public:
 	BOOL m_checkLVDStele;
 	afx_msg void OnBnClickedCheckCantele();
 	afx_msg void OnBnClickedCheckLvdstele();
-	void setRefreshSheet(CDlgRefreshSheet *Refreshsheet);
+	void setRefreshSheet(CDlgRefreshSheet *Refreshsheet, CReplayConfig *ReplayConfig);
 	afx_msg void OnBnClickedButtonCurrenttime();
 	int m_edit_TaskT0Time;
 	CEdit m_Edit_reportOutput;
