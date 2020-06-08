@@ -42,7 +42,8 @@ enum
 	COL_ARG
 };
 #define injectTaskNUM		  20
-#define MAX_ARG_NUM				256
+#define MAX_ARG_NUM				150
+#define MAX_Combx_NUM			100
 #define MAX_ARG_LENGTH			256
 #define MAX_NAME_LENGTH			256
 #define MAX_INJECTTION			17*1024*1024
@@ -58,10 +59,18 @@ enum
 #define TELEREPALYCONFIG		2
 #define TELEFRAMELEN				512		//遥测帧长度
 
+#define TELETYPED3			    0xD3			//工程参数
+#define TELETYPED2			    0xD2			//工程参数
+#define TELETYPED1			    0xD1			//工程参数
+#define D1LENGTH				154
+#define D2LENGTH				154
+#define D3LENGTH				154
+#define TELEFRAMELEN				308		//载荷遥测帧长度
 
+#define MONITORCMDNUM			6
+extern CListBox *g_pListBoxSendoutput;
+extern CListBox *g_pListBoxRecvoutput;
 
-extern CString gstr_output_send;
-extern CString gstr_outputReport;
 typedef struct
 {
 	char *Buf;
@@ -91,16 +100,16 @@ typedef struct
 	unsigned short bit_start[MAX_ARG_NUM];
 	unsigned short arg_length[MAX_ARG_NUM];
 	unsigned char arg_name[MAX_ARG_NUM][MAX_NAME_LENGTH];
-	unsigned char Arg_CombxName[MAX_ARG_NUM][MAX_ARG_NUM][MAX_NAME_LENGTH];
-	unsigned char Arg_CombxCode[MAX_ARG_NUM][MAX_ARG_NUM];
+	unsigned char Arg_CombxName[MAX_ARG_NUM][MAX_Combx_NUM][MAX_NAME_LENGTH];
+	unsigned char Arg_CombxCode[MAX_ARG_NUM][MAX_Combx_NUM];
 	unsigned char datatype[MAX_ARG_NUM];
-	unsigned char cal[MAX_NAME_LENGTH];;
+	unsigned char cal[MAX_ARG_NUM];;
 	int combcntNum[MAX_ARG_NUM];
 	unsigned char input_type[MAX_ARG_NUM];
 	unsigned char input_ctrl_index[MAX_ARG_NUM];
 	double coef[MAX_ARG_NUM];
 	unsigned char arg_num;
-	unsigned char arg_byte_num;
+	unsigned short arg_byte_num;
 }CmdInfo;
 typedef struct 
 {
@@ -126,5 +135,7 @@ enum{
 	ADCHANNEL_QKDMAINSLAVE = 1,
 	ADCHANNEL_SYN = 2
 };
+void ListBoxInfo(CString str, CListBox *ListBoxSendoutput);
+
 #endif
 

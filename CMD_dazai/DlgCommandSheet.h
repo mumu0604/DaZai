@@ -12,6 +12,7 @@
 #include "Ctelemetry.h"
 #include "DlgRefreshSheet.h"
 #include "ReplayConfig.h"
+#include "DlgPlotSheet.h"
 using namespace std;
 // CDlgCommandSheet dialog
 
@@ -54,15 +55,15 @@ public:
 	int m_iRealCmdCnt;
 	CMD_WN m_cmdAddInfo[MAXCOMMAND];
 	CmdInfo *m_pCmdInfo[100];
-	CmdInfo *m_pMonitorInfo[50];
-	CmdInfo *m_pCANcmdInfo[50];
-	CmdInfo *m_pLVDScmdInfo[50];
+	CmdInfo *m_pMonitorInfo[MONITORCMDNUM];
+	CmdInfo *m_pCANcmdInfo[MONITORCMDNUM];
+	CmdInfo *m_pLVDScmdInfo[MONITORCMDNUM];
 	map<CString, int> m_mappackType;
 
 	xmlXPathObjectPtr LocateXPath(char xpath_expr[]);
 	xmlXPathObjectPtr LocateCommand(unsigned char dev_id, unsigned char cmd_id);
 	void GetCmdInfo(CmdInfo *m_pCmdInfo[100]);
-	int GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[50]);
+	int GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[MONITORCMDNUM]);
 //	void InsertArgValue(unsigned char *pDst, unsigned char *pSrc, int bitStart, int length);
 	afx_msg void OnNMDblclkListControl(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedButtonCanpara();
@@ -94,6 +95,7 @@ public:
 	void ShowInfo(CString str);
 	CString m_StrCMDsend;
 	CEdit m_pEditCmdSend;
+	CEdit m_Edit_reportOutput;
 	afx_msg void OnBnClickedButtonCmdsend();
 	CListCtrl m_ListTeleOutput;
 	int m_MonitorCmdNum;
@@ -137,6 +139,7 @@ public:
 	BOOL m_islvdsdatasend;//lvds数据正在发送
 	CDlgRefreshSheet *m_dlgRefreshsheet;
 	CReplayConfig *m_CReplayConfig;
+	CDlgPlotSheet *m_dlgPlotSheet;
 	afx_msg void OnBnClickedCheckIstaskdata();
 	afx_msg void OnBnClickedButtonTaskdatadir();
 	CString m_EditTaskInjectionDatafiel;
@@ -147,9 +150,13 @@ public:
 	BOOL m_checkLVDStele;
 	afx_msg void OnBnClickedCheckCantele();
 	afx_msg void OnBnClickedCheckLvdstele();
-	void setRefreshSheet(CDlgRefreshSheet *Refreshsheet, CReplayConfig *ReplayConfig);
+	void setRefreshSheet(CDlgRefreshSheet *Refreshsheet, CReplayConfig *ReplayConfig, CDlgPlotSheet *PlotSheet);
 	afx_msg void OnBnClickedButtonCurrenttime();
 	int m_edit_TaskT0Time;
-	CEdit m_Edit_reportOutput;
+	
 	afx_msg void OnDestroy();
+	afx_msg void OnBnClickedButtonClearstrSend();
+	afx_msg void OnBnClickedButtonClearstrRecv();
+	CListBox m_ListBoxSendoutput;
+	CListBox m_ListBoxRecvoutput;
 };

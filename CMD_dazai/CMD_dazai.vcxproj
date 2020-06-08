@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClCompile Include="CMD_dazai.cpp" />
     <ClCompile Include="CMD_dazaiDlg.cpp" />
+    <ClCompile Include="Common.cpp" />
     <ClCompile Include="Ctelemetry.cpp" />
     <ClCompile Include="DlgAddCommand.cpp" />
     <ClCompile Include="DlgCANCOFIG.cpp" />

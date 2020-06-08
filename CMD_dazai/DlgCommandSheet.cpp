@@ -47,6 +47,8 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	m_mappackType["删除测试任务"] = 0x87;
 	m_iscandatasend = FALSE;
 	m_islvdsdatasend = FALSE;
+	g_pListBoxSendoutput = &m_ListBoxSendoutput;
+	g_pListBoxRecvoutput = &m_ListBoxRecvoutput;
 }
 
 CDlgCommandSheet::~CDlgCommandSheet()
@@ -57,7 +59,6 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_CONTROL, m_ListCtrlCommand);
-	DDX_Control(pDX, IDC_EDIT_CMDSEND_OUTPUT, m_pEditCmdSend);
 	DDX_Control(pDX, IDC_LIST_TELEOUTPUT, m_ListTeleOutput);
 	DDX_Control(pDX, IDC_COMBO_PACKTYPE, m_ComboBoxPackType);
 	DDX_Control(pDX, IDC_COMBO_CANCMD, m_ComboCancmd);
@@ -84,7 +85,8 @@ void CDlgCommandSheet::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_CHECK_CANTELE, m_checkCANtele);
 	DDX_Check(pDX, IDC_CHECK_LVDSTELE, m_checkLVDStele);
 	DDX_Text(pDX, IDC_EDIT_TASKTOTIME, m_edit_TaskT0Time);
-	DDX_Control(pDX, IDC_EDIT_OUTPUTREPORT, m_Edit_reportOutput);
+	DDX_Control(pDX, IDC_LIST_SendOutput, m_ListBoxSendoutput);
+	DDX_Control(pDX, IDC_LIST_RecvOutput, m_ListBoxRecvoutput);
 }
 
 
@@ -118,6 +120,8 @@ BEGIN_MESSAGE_MAP(CDlgCommandSheet, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECK_LVDSTELE, &CDlgCommandSheet::OnBnClickedCheckLvdstele)
 	ON_BN_CLICKED(IDC_BUTTON_CURRENTTIME, &CDlgCommandSheet::OnBnClickedButtonCurrenttime)
 	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_BUTTON_CLEARSTR_SEND, &CDlgCommandSheet::OnBnClickedButtonClearstrSend)
+	ON_BN_CLICKED(IDC_BUTTON_CLEARSTR_RECV, &CDlgCommandSheet::OnBnClickedButtonClearstrRecv)
 END_MESSAGE_MAP()
 
 
@@ -656,9 +660,9 @@ void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[100])
 // 		}
 // 	}
 }
-int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[50])
+int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[MONITORCMDNUM])
 {
-	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* 50);
+	memset(m_pCmdInfo, 0, sizeof(CmdInfo *)* MONITORCMDNUM);
 	xmlXPathObjectPtr xpathObj;
 	char xpath_expr[200];
 	int i, j;
@@ -848,40 +852,28 @@ void CDlgCommandSheet::SetCurrentTimer()
 	time_t nowtime;
 	nowtime = time(NULL);
 	nowtime = m_edit_TaskT0Time + nowtime - m_pInterface->m_taskT0time;
+	tm temptm = *localtime(&nowtime);
+	SYSTEMTIME st = { 1900 + temptm.tm_year, 1 + temptm.tm_mon, temptm.tm_wday, temptm.tm_mday, temptm.tm_hour, temptm.tm_min, temptm.tm_sec, 0 };
 	CString strBuf;
-	strBuf.Format("%d", nowtime);
-	SYSTEMTIME t;
-// 	t = m_CTeleDisplay.TimetToSystemTime(nowtime);
-// //	GetLocalTime(&t);
-// 	strBuf.Format("%03d日%02d时%02d分%02d秒%03d毫秒",
-// 		t.wDay-m_GPSTimeNowday.wDay,
-// 		t.wHour,
-// 		t.wMinute,
-// 		t.wSecond,
-// 		t.wMilliseconds);
+//	strBuf.Format("%d", nowtime);	
+//	GetLocalTime(&t);
+	strBuf.Format("%03d日%02d时%02d分%02d秒---%d",
+		st.wDay-1,
+		st.wHour-8,
+		st.wMinute,
+		st.wSecond,
+		nowtime);
 	GetDlgItem(IDC_BUTTON_CURRENTTIME)->SetWindowText(strBuf);
 }
 void CDlgCommandSheet::Setteleinitvalue(RecvScanBuf telebuf)
 {
 	CmdInfo *pCmdInfo;
 	int k = 0;
-	int idx = 0;
-	while (k < telebuf.len)
-	{		
-		pCmdInfo = m_pMonitorInfo[idx];
-		if ((telebuf.len - k) < pCmdInfo->arg_byte_num)
-		{
-			memcpy(pCmdInfo->init_value, telebuf.Buf + k, telebuf.len - k);
-			k = telebuf.len;
-		}
-		else
-		{
-			memcpy(pCmdInfo->init_value, telebuf.Buf + k, pCmdInfo->arg_byte_num);
-			k += pCmdInfo->arg_byte_num;
-		}
-		
-		
-		idx++;
+	for (int i = 0; i < m_MonitorCmdNum; i++)
+	{
+		pCmdInfo = m_pMonitorInfo[i];
+		memcpy(pCmdInfo->init_value, telebuf.Buf + k, pCmdInfo->arg_byte_num);
+		k += pCmdInfo->arg_byte_num;
 	}
 }
 void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
@@ -892,10 +884,8 @@ void CDlgCommandSheet::OnTimer(UINT_PTR nIDEvent)
 	{
 	case TIEMRCOMMANDTIEM:
 		SetCurrentTimer();
-		m_pEditCmdSend.SetWindowTextA(gstr_output_send);
-		m_pEditCmdSend.LineScroll(m_pEditCmdSend.GetLineCount(), 0);
-		m_Edit_reportOutput.SetWindowTextA(gstr_outputReport);
-		m_Edit_reportOutput.LineScroll(m_Edit_reportOutput.GetLineCount(), 0);
+// 		m_ListBoxSendoutput.SetCurSel(m_ListBoxSendoutput.GetCount() - 1);
+// 		m_ListBoxRecvoutput.SetCurSel(m_ListBoxRecvoutput.GetCount() - 1);
 		if (m_pInterface->m_telebuffull)
 		{
 			Setteleinitvalue(m_pInterface->m_telebuf);
@@ -982,11 +972,7 @@ void CDlgCommandSheet::OnCmdSend()
 	{
 		MessageBox("请选择发送通道!", "警告");
 		return;
-	}
-	GetDlgItem(IDC_BUTTON_SINGELCMDSEDN)->EnableWindow(FALSE);
-	char *InjectionBuffer, *dataFramBuffer;
-	InjectionBuffer = (char *)malloc(MAX_INJECTTION);//
-	dataFramBuffer = (char *)malloc(MAX_INJECTTION);//最大数据长度
+	}	
 	InjectionInfo Injectionpara;
 	Getinjectionpara(&Injectionpara);
 	CMDbuf cmdbuf;
@@ -995,10 +981,12 @@ void CDlgCommandSheet::OnCmdSend()
 	fp = fopen("", "wb");
 	if (!bret)
 	{
-		free(InjectionBuffer);
-		free(dataFramBuffer);
 		return;
 	}
+	GetDlgItem(IDC_BUTTON_SINGELCMDSEDN)->EnableWindow(FALSE);
+	char *InjectionBuffer, *dataFramBuffer;
+	InjectionBuffer = (char *)malloc(MAX_INJECTTION);//
+	dataFramBuffer = (char *)malloc(MAX_INJECTTION);//最大数据长度
 	int injectcnt = getcmdinjectiondata(cmdbuf, InjectionBuffer, dataFramBuffer);
 	
 	if (m_checkSinglecmdlvds)
@@ -1557,6 +1545,7 @@ bool CDlgCommandSheet::GetCMDlist(CMDbuf *cmdbuf)
 //获取单条指令cmd
 bool CDlgCommandSheet::GetCMDsingle(CMDbuf *cmdbuf)
 {
+	CString str="单指令发送：";
 	int idx = 0;
 	CMD_WN *pCmd;
 	CmdInfo *pCmdInfo;
@@ -1589,6 +1578,14 @@ bool CDlgCommandSheet::GetCMDsingle(CMDbuf *cmdbuf)
 	memcpy((cmdbuf->Buf + idx), pCmd->args, pCmdInfo->arg_byte_num);
 	idx += pCmdInfo->arg_byte_num;
 	cmdbuf->CmdBcnt = idx;
+	str += (char*)(pCmdInfo->cmd_name);
+	str += "  ";
+	for (int i = 0; i < pCmdInfo->arg_byte_num; i++)
+	{
+		str.Format(str + "%02x", pCmd->args[i]);
+	}
+	ListBoxInfo(str,&m_ListBoxSendoutput);
+	return TRUE;
 }
 //获取任务帧参数 开始时间要修改
 void CDlgCommandSheet::Getinjectionpara(InjectionInfo *Injectionpara)
@@ -1680,7 +1677,7 @@ void CDlgCommandSheet::OnBnClickedButtonCmdsend()
 void CDlgCommandSheet::OnBnClickedButtonCansend()
 {
 	// TODO: Add your control notification handler code here
-
+	CString str;
 	if (!(m_checkCANinjection || m_checkCANimmedieate))
 	{
 		MessageBox("请选择发送的指令类型!", "警告");
@@ -1692,6 +1689,7 @@ void CDlgCommandSheet::OnBnClickedButtonCansend()
 	if (m_checkCANinjection)
 	{	
 		m_pInterface->m_caninjectTaskSend = TRUE;
+		ListBoxInfo("CAN注入任务帧",&m_ListBoxSendoutput);
 	}
 	if (m_checkCANimmedieate)
 	{
@@ -1700,6 +1698,9 @@ void CDlgCommandSheet::OnBnClickedButtonCansend()
 		memcpy(buffer, m_pCANcmdInfo[index]->init_value, m_pCANcmdInfo[index]->arg_byte_num);
 		m_pInterface->getCANimmediatebuf(m_pCANcmdInfo[index]->datatype[0], buffer, &m_pInterface->m_sendcandatabuf);
 		m_pInterface->m_canimmedieateSend = TRUE;
+		str += "CAN注入立即令：";
+		str += (char*)(m_pCANcmdInfo[index]->cmd_name);
+		ListBoxInfo(str, &m_ListBoxSendoutput);
 	}
 //	m_pInterface->Releasethread(m_pInterface->m_hMutexCan);
 }
@@ -1707,6 +1708,7 @@ void CDlgCommandSheet::OnBnClickedButtonCansend()
 //lvds 注入
 void CDlgCommandSheet::OnBnClickedButtonlvdsinjectsend()
 {
+	CString str;
 	// TODO: Add your control notification handler code here	
 	if (!(m_checkLVDSinjection || m_checkLVDSimmedieate))
 	{
@@ -1720,6 +1722,7 @@ void CDlgCommandSheet::OnBnClickedButtonlvdsinjectsend()
 	{
 		m_pInterface->m_lvdsinjectTaskSend = TRUE;		
 		m_pInterface->m_iswaitresponse = TRUE;
+		ListBoxInfo("LVDS注入任务帧", &m_ListBoxSendoutput);
 	}
 	if (m_checkLVDSimmedieate)
 	{
@@ -1728,6 +1731,9 @@ void CDlgCommandSheet::OnBnClickedButtonlvdsinjectsend()
 		m_pInterface->m_sendLVDSdatabuf.framecode = m_pLVDScmdInfo[index]->datatype[0];
 		memcpy(m_pInterface->m_sendLVDSdatabuf.buffer, m_pLVDScmdInfo[index]->init_value, m_pLVDScmdInfo[index]->arg_byte_num);
 		m_pInterface->m_lvdsimmedieateSend = TRUE;
+		str += "LVDS注入立即令：";
+		str += (char*)(m_pCANcmdInfo[index]->cmd_name);
+		ListBoxInfo(str, &m_ListBoxSendoutput);
 	}
 }
 //can注入目录
@@ -1928,12 +1934,22 @@ void CDlgCommandSheet::OnBnClickedCheckLvdstele()
 	UpdateData(FALSE);
 	
 }
-void CDlgCommandSheet::setRefreshSheet(CDlgRefreshSheet *Refreshsheet, CReplayConfig *ReplayConfig)
+void CDlgCommandSheet::setRefreshSheet(CDlgRefreshSheet *Refreshsheet, CReplayConfig *ReplayConfig, CDlgPlotSheet *PlotSheet)
 {
 	m_dlgRefreshsheet = Refreshsheet;
 	m_CReplayConfig = ReplayConfig;
-	strcpy((char*)m_CReplayConfig->m_ptelecmdInfo, (char*)m_pMonitorInfo);
+	m_dlgPlotSheet = PlotSheet;	
+	for (int i = 0; i < m_MonitorCmdNum; i++)
+	{
+		m_CReplayConfig->m_ptelecmdInfo[i] = (CmdInfo *)malloc(sizeof(CmdInfo));
+		memcpy(m_CReplayConfig->m_ptelecmdInfo[i], m_pMonitorInfo[i], sizeof(CmdInfo));
+		m_dlgPlotSheet->m_ptelecmdInfo[i] = (CmdInfo *)malloc(sizeof(CmdInfo));
+		memcpy(m_dlgPlotSheet->m_ptelecmdInfo[i], m_pMonitorInfo[i], sizeof(CmdInfo));
+	}
+// 	memcpy(m_dlgPlotSheet->m_ptelecmdInfo, m_pMonitorInfo, MONITORCMDNUM * 4);
+// 	memcpy(m_CReplayConfig->m_ptelecmdInfo, m_pMonitorInfo, MONITORCMDNUM * 4);
 	m_CReplayConfig->m_MonitorCmdNum = m_MonitorCmdNum;
+	m_dlgPlotSheet->m_MonitorCmdNum = m_MonitorCmdNum;
 	m_dlgRefreshsheet->m_CTeleDisplayfre.displayList(true, m_pMonitorInfo, m_MonitorCmdNum, &m_dlgRefreshsheet->m_ListRefresh,3);
 }
 
@@ -1980,4 +1996,18 @@ void CDlgCommandSheet::OnDestroy()
 	m_pInterface->closelogFile();
 	// TODO: Add your message handler code here
 
+}
+
+
+void CDlgCommandSheet::OnBnClickedButtonClearstrSend()
+{
+	// TODO: Add your control notification handler code here
+	m_ListBoxSendoutput.ResetContent();
+}
+
+
+void CDlgCommandSheet::OnBnClickedButtonClearstrRecv()
+{
+	// TODO: Add your control notification handler code here
+	m_ListBoxRecvoutput.ResetContent();
 }

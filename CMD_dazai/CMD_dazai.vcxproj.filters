@@ -137,6 +137,9 @@
     <ClCompile Include="SMencryption.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CMD_dazai.rc">
