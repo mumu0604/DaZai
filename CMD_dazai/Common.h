@@ -68,6 +68,9 @@ enum
 #define TELEFRAMELEN				308		//‘ÿ∫…“£≤‚÷°≥§∂»
 
 #define MONITORCMDNUM			6
+
+#define ATPCMDSEGTEMP			0X20
+#define ATPCMDPARANUM				32
 extern CListBox *g_pListBoxSendoutput;
 extern CListBox *g_pListBoxRecvoutput;
 

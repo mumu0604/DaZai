@@ -210,6 +210,17 @@ void CDlgAddCommand::SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue
 	for (i = 0; i < pCmdInfo->arg_num; i++){
 //		m_pDlg->m_Ctelemetry.ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 		m_pDlg->ExtractArgValue1(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
+		unsigned char tem_ATP[ATPCMDPARANUM];
+		if (cmd_id > ATPCMDSEGTEMP)
+		{
+			int len = (pCmdInfo->arg_length[i] + 7) / 8;
+			for (int jj = 0; jj < len; jj++)
+			{
+				tem_ATP[jj] = temp[len - 1 - jj];
+			}
+			memcpy(temp, tem_ATP, len);
+		}
+		/////////////////////////////ATPÌí¼Ó
 		strArg = "";
 		for (j = 0; j < pCmdInfo->arg_length[i] / 8; j++){
 			strBuf.Format("%02X", temp[j]);
@@ -244,8 +255,7 @@ void CDlgAddCommand::SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue
 
 void CDlgAddCommand::InitUI(unsigned char *pCmd)
 {
-	CString strArgName;
-
+	
 	int i = 0;
 
 	CmdInfo *pCmdInfo;
@@ -257,8 +267,9 @@ void CDlgAddCommand::InitUI(unsigned char *pCmd)
 	if (!pCmdInfo){
 		return;
 	}
-
-	GetDlgItem(IDC_EDITCMDNAME)->SetWindowText((char *)pCmdInfo->cmd_name);
+	CString strArgName((char *)pCmdInfo->cmd_name);
+	strArgName.Format(strArgName + "-%02X", m_pCmd_WN->cmd_id);
+	GetDlgItem(IDC_EDITCMDNAME)->SetWindowText(strArgName);
 
 
 	if (pCmdInfo->arg_num < 24){
@@ -473,8 +484,18 @@ void CDlgAddCommand::OnBnClickedOk()
 		iPosition = 0;
 		strArg.GetBufferSetLength((pCmdInfo->arg_length[i] + 7) / 8 * 2);
 
-		unsigned int arg = strtoul(strArg, &endptr, 16);
+		unsigned int arg = strtoul(strArg, &endptr, 16);	
 		memcpy(temp, &arg, (pCmdInfo->arg_length[i] + 7) / 8);
+		unsigned char tem_ATP[ATPCMDPARANUM];
+		if (m_pCmd_WN->cmd_id > ATPCMDSEGTEMP)
+		{
+			int len = (pCmdInfo->arg_length[i] + 7) / 8;
+			for (int jj = 0; jj < len; jj++)
+			{
+				tem_ATP[jj] = temp[len - 1 - jj];
+			}
+			memcpy(temp, tem_ATP, len);
+		}/////////////////////////ATPÒ£²âÌí¼Ó
 // 		if (pCmdInfo->arg_length[i] & 0x7){
 // 			if (pCmdInfo->input_type[i] == 0){
 // 				arg = arg << (8 - (pCmdInfo->arg_length[i] & 0x7));

@@ -76,6 +76,7 @@ public:
 	void SaveToPLD(CFile *pldFile);
 	void LoadFromPLD(CString fileName);
 	void Setteleinitvalue(RecvScanBuf telebuf);
+	void Setteleinitvalue1(RecvScanBuf telebuf);
 	SYSTEMTIME m_GPSTimeNowday;
 	CMenu m_menu;
 	unsigned char m_bus_flag;

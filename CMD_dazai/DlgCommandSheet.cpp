@@ -33,7 +33,7 @@ CDlgCommandSheet::CDlgCommandSheet(CWnd* pParent /*=NULL*/)
 	, m_EditTaskInjectionDatafiel(_T(""))
 	, m_checkSinglecmdlvds(FALSE)
 	, m_checkSinglecmdcan(TRUE)
-	, m_checkCANtele(FALSE)
+	, m_checkCANtele(TRUE)
 	, m_checkLVDStele(FALSE)
 	, m_edit_TaskT0Time(0)
 {
@@ -469,6 +469,18 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 	strBuf = "";
 	for (j = 0; j < pCmdInfo->arg_num; j++){
 		ExtractArgValue1(temp, pAddedCmd->args, pCmdInfo->bit_start[j], pCmdInfo->arg_length[j]);
+		unsigned char tem_ATP[ATPCMDPARANUM];
+		if (pCmd->cmd_id > ATPCMDSEGTEMP)
+		{
+			int len = (pCmdInfo->arg_length[j] + 7) / 8;
+			for (int jj = 0; jj < len; jj++)
+			{
+				tem_ATP[jj] = temp[len - 1 - jj];
+			}
+			memcpy(temp, tem_ATP, len);
+		}
+		/////////////////////////////ATPÒ£²âÌí¼Ó
+
 		for (k = 0; k < pCmdInfo->arg_length[j] / 8; k++){
 			strBuf1.Format("%02X", temp[k]);
 			strBuf += strBuf1;
@@ -768,7 +780,7 @@ int CDlgCommandSheet::GetMonitorxmlInfo(CmdInfo *m_pCmdInfo[MONITORCMDNUM])
 					if (xmlRtn)
 					{
 						str = xmlRtn;
-						pCmdInfo->cal[idx] = strtol(str.Left(2), &endptr, 10);
+						pCmdInfo->cal[idx] = strtol(str.Left(2), &endptr, 16);
 						xmlFree(xmlRtn);
 					}
 					xmlRtn = xmlGetProp(pNode, BAD_CAST("bitStart"));
@@ -846,7 +858,21 @@ void CDlgCommandSheet::OnBnClickedButtonCanpara()
 
 	}
 }
-
+void CDlgCommandSheet::Setteleinitvalue1(RecvScanBuf telebuf)
+{
+	FILE *fp;
+	fp = fopen("test.dat", "rb");
+	fread(telebuf.Buf + 179, 1, 129, fp);
+	CmdInfo *pCmdInfo;
+	int k = 0;
+	for (int i = 0; i < m_MonitorCmdNum; i++)
+	{
+		pCmdInfo = m_pMonitorInfo[i];
+		memcpy(pCmdInfo->init_value, telebuf.Buf + k, pCmdInfo->arg_byte_num);
+		k += pCmdInfo->arg_byte_num;
+	}
+	fclose(fp);
+}
 void CDlgCommandSheet::SetCurrentTimer()
 {
 	time_t nowtime;
