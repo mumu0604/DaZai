@@ -197,11 +197,11 @@ BOOL CDlgCommandSheet::OnInitDialog()
 	}LIST_HEAD;
 
 	LIST_HEAD head[] = {
-		{ "序号", 60 },
-		{ "绝对时间", 240 },
+		{ "序号", 40 },
+		{ "绝对时间", 60 },
 		{ "指令功能描述", 180 },
-		{ "指令码", 60 },
-		{ "参数长度", 80 },
+		{ "指令码", 40 },
+		{ "参数长度", 40 },
 		{ "参数", 660 }
 	};
 	LV_COLUMN lvc[sizeof(head) / sizeof(LIST_HEAD)];
@@ -469,16 +469,17 @@ void CDlgCommandSheet::AddCmdToList(CMD_WN *pCmd, int index, int bNew)
 	strBuf = "";
 	for (j = 0; j < pCmdInfo->arg_num; j++){
 		ExtractArgValue1(temp, pAddedCmd->args, pCmdInfo->bit_start[j], pCmdInfo->arg_length[j]);
-		unsigned char tem_ATP[ATPCMDPARANUM];
-		if (pCmd->cmd_id > ATPCMDSEGTEMP)
-		{
-			int len = (pCmdInfo->arg_length[j] + 7) / 8;
-			for (int jj = 0; jj < len; jj++)
-			{
-				tem_ATP[jj] = temp[len - 1 - jj];
-			}
-			memcpy(temp, tem_ATP, len);
-		}
+		invertBuffer((pCmdInfo->arg_length[i] + 7) / 8, temp);
+//		unsigned char tem_ATP[ATPCMDPARANUM];
+// 		if (pCmd->cmd_id > ATPCMDSEGTEMP)
+// 		{
+// 			int len = (pCmdInfo->arg_length[j] + 7) / 8;
+// 			for (int jj = 0; jj < len; jj++)
+// 			{
+// 				tem_ATP[jj] = temp[len - 1 - jj];
+// 			}
+// 			memcpy(temp, tem_ATP, len);
+// 		}
 		/////////////////////////////ATP遥测添加
 
 		for (k = 0; k < pCmdInfo->arg_length[j] / 8; k++){
@@ -630,19 +631,19 @@ void CDlgCommandSheet::GetCmdInfo(CmdInfo *m_pCmdInfo[100])
 					xmlRtn = xmlGetProp(pNode, BAD_CAST("initValue"));
 					strTemp = xmlRtn;
 					xmlFree(xmlRtn);
-// 					strTemp.GetBufferSetLength((pCmdInfo->arg_length[idx] + 7) / 8 * 2);
-// 					for (j = 0; j < pCmdInfo->arg_length[idx] / 8; j++){
-// 						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
-// 					}
-// 					if (pCmdInfo->arg_length[idx] & 0x7){
-// 						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
-// 						if (pCmdInfo->input_type[idx] == 0){
-// 							temp[j] <<= (8 - (pCmdInfo->arg_length[idx] & 0x7));
-// 						}
-// 					}
+					strTemp.GetBufferSetLength((pCmdInfo->arg_length[idx] + 7) / 8 * 2);
+					for (j = 0; j < pCmdInfo->arg_length[idx] / 8; j++){
+						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
+					}
+					if (pCmdInfo->arg_length[idx] & 0x7){
+						temp[j] = strtol(strTemp.Mid(j * 2, 2), &endptr, 16);
+						if (pCmdInfo->input_type[idx] == 0){
+							temp[j] <<= (8 - (pCmdInfo->arg_length[idx] & 0x7));
+						}
+					}
 
-					unsigned int arg = strtoul(strTemp, &endptr, 16);
-					memcpy(temp, &arg, (pCmdInfo->arg_length[idx] + 7) / 8);
+// 					unsigned int arg = strtoul(strTemp, &endptr, 16);
+// 					memcpy(temp, &arg, (pCmdInfo->arg_length[idx] + 7) / 8);
 					m_Ctelemetry.InsertArgValue(pCmdInfo->init_value, temp, pCmdInfo->bit_start[idx], pCmdInfo->arg_length[idx]);
 					if (pCmdInfo->input_type[idx] == 0){
 						pCmdInfo->input_ctrl_index[idx] = combo_index;
@@ -1142,8 +1143,13 @@ void CDlgCommandSheet::OnCmdInsert()
 	cmd.bus_flag = m_bus_flag;
 	int ret = dlgAddCmd.DoModal();
 	if (ret == IDOK){
+		
+		for (int i = m_iRealCmdCnt; i >= index; i--)
+		{
+			memcpy(m_cmdAddInfo + i+1, m_cmdAddInfo + i, sizeof(CMD_WN));			
+		}
 		AddCmdToList(&cmd, index, 1);
-		memcpy(&m_cmdAddInfo[m_iRealCmdCnt], &cmd, sizeof(CMD_WN));
+		memcpy(&m_cmdAddInfo[index], &cmd, sizeof(CMD_WN));
 		m_iRealCmdCnt++;
 		//		m_list.DeleteItem(index);
 
@@ -1775,7 +1781,7 @@ void CDlgCommandSheet::OnBnClickedButtonCaninjectfile()
 	filedlg.m_ofn.lpstrFile = pBuffer;
 	filedlg.m_ofn.nMaxFile = MAX_PATH * injectTaskNUM;
 	filedlg.m_ofn.lpstrFile[0] = '\0';
-
+	m_editCANinjectdir = "";
 	if (filedlg.DoModal() == IDOK)
 	{
 		CString cstrfilepath = _T("");
@@ -1810,7 +1816,7 @@ void CDlgCommandSheet::OnBnClickedButtonLvdsinfile()
 	filedlg.m_ofn.lpstrFile = pBuffer;
 	filedlg.m_ofn.nMaxFile = MAX_PATH * injectTaskNUM;
 	filedlg.m_ofn.lpstrFile[0] = '\0';
-
+	m_editLVDSinjectdir = "";
 	if (filedlg.DoModal() == IDOK)
 	{
 		CString cstrfilepath = _T("");

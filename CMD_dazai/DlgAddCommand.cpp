@@ -210,16 +210,17 @@ void CDlgAddCommand::SetValueToUI(unsigned char cmd_id, unsigned char *pArgValue
 	for (i = 0; i < pCmdInfo->arg_num; i++){
 //		m_pDlg->m_Ctelemetry.ExtractArgValue(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
 		m_pDlg->ExtractArgValue1(temp, pArgValue, pCmdInfo->bit_start[i], pCmdInfo->arg_length[i]);
-		unsigned char tem_ATP[ATPCMDPARANUM];
-		if (cmd_id > ATPCMDSEGTEMP)
-		{
-			int len = (pCmdInfo->arg_length[i] + 7) / 8;
-			for (int jj = 0; jj < len; jj++)
-			{
-				tem_ATP[jj] = temp[len - 1 - jj];
-			}
-			memcpy(temp, tem_ATP, len);
-		}
+		invertBuffer((pCmdInfo->arg_length[i] + 7) / 8, temp);
+// 		unsigned char tem_ATP[ATPCMDPARANUM];
+// 		if (cmd_id > ATPCMDSEGTEMP)
+// 		{
+// 			int len = (pCmdInfo->arg_length[i] + 7) / 8;
+// 			for (int jj = 0; jj < len; jj++)
+// 			{
+// 				tem_ATP[jj] = temp[len - 1 - jj];
+// 			}
+// 			memcpy(temp, tem_ATP, len);
+// 		}
 		/////////////////////////////ATPÌí¼Ó
 		strArg = "";
 		for (j = 0; j < pCmdInfo->arg_length[i] / 8; j++){
@@ -436,31 +437,6 @@ void CDlgAddCommand::OnBnClickedOk()
 	m_pCmd_WN->bus_flag = m_pDlg->m_bus_flag;
 
 
-// 	COleDateTime ct;
-// 	int sec = 0;
-// 	ULARGE_INTEGER f;
-// 	__int64 diff;
-// 	SYSTEMTIME t_time;
-// 	m_timePicker.GetTime(ct);
-// 	t_time.wYear = ct.GetYear();
-// 	t_time.wMonth = ct.GetMonth();
-// 	t_time.wDay = ct.GetDay();
-// 	t_time.wHour = ct.GetHour();
-// 	t_time.wMinute = ct.GetMinute();
-// 	t_time.wSecond = ct.GetSecond();
-// 	t_time.wMilliseconds = 0;
-
-//	time_t pt = m_pDlg->m_CTeleDisplay.SystemTimeToTimet(t_time);
-
-// 	SYSTEMTIME st;
-// 	time_t nowtime;
-// 	nowtime = time(NULL);
-// 	struct tm *local;
-// 	local = localtime(&nowtime);
-// 	time_t aa = mktime(local); 	
-// 	CString str = asctime(local);
-//	SystemTimeToFileTime(&t_time, (FILETIME *)&m_pDlg->m_base_relative);
-
 
 	if (!m_pCmd_WN->immediate_flag){
 		m_pCmd_WN->time = m_editCMDoffsettime;
@@ -486,16 +462,17 @@ void CDlgAddCommand::OnBnClickedOk()
 
 		unsigned int arg = strtoul(strArg, &endptr, 16);	
 		memcpy(temp, &arg, (pCmdInfo->arg_length[i] + 7) / 8);
-		unsigned char tem_ATP[ATPCMDPARANUM];
-		if (m_pCmd_WN->cmd_id > ATPCMDSEGTEMP)
-		{
-			int len = (pCmdInfo->arg_length[i] + 7) / 8;
-			for (int jj = 0; jj < len; jj++)
-			{
-				tem_ATP[jj] = temp[len - 1 - jj];
-			}
-			memcpy(temp, tem_ATP, len);
-		}/////////////////////////ATPÒ£²âÌí¼Ó
+		invertBuffer((pCmdInfo->arg_length[i] + 7) / 8, temp);
+// 		unsigned char tem_ATP[ATPCMDPARANUM];
+// 		if (m_pCmd_WN->cmd_id > ATPCMDSEGTEMP)
+// 		{
+// 			int len = (pCmdInfo->arg_length[i] + 7) / 8;
+// 			for (int jj = 0; jj < len; jj++)
+// 			{
+// 				tem_ATP[jj] = temp[len - 1 - jj];
+// 			}
+// 			memcpy(temp, tem_ATP, len);
+// 		}/////////////////////////ATPÒ£²âÌí¼Ó
 // 		if (pCmdInfo->arg_length[i] & 0x7){
 // 			if (pCmdInfo->input_type[i] == 0){
 // 				arg = arg << (8 - (pCmdInfo->arg_length[i] & 0x7));

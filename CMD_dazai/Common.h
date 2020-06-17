@@ -71,6 +71,51 @@ enum
 
 #define ATPCMDSEGTEMP			0X20
 #define ATPCMDPARANUM				32
+
+#define LVDSRS422SEGLENGTH		1500 //¶Î³¤
+
+#define	RECV_SCAN_head0		0x00
+#define	RECV_SCAN_head1		0x01
+#define	RECV_SCAN_head2		0x02
+#define	RECV_SCAN_head3		0x03
+#define	RECVFRAMELEN0		0x04
+#define	RECVFRAMELEN1		0x05
+#define RECVDEVICETYPE		0X06
+#define RECVDEVICECODE		0X07
+#define RECVFRAMECODE       0X08
+#define RECVRESERVE0		0X09
+#define RECVRESERVE1		0X0A
+#define RECVRESERVE2		0X0B
+#define RECV_SCAN_CONTENT	0x0C
+
+
+#define CRYPT_RESULT_LEVAL_NORMAL		 0x00
+#define CRYPT_RESULT_LEVAL_WARNING		 0x01
+#define CRYPT_RESULT_LEVAL_FATAL		 0x02
+#define CRYPT_RESULT_NORMAL				 0x00
+#define CRYPT_RESULT_VERSIONERR			 0x01
+#define CRYPT_RESULT_TAGERR				0x02
+#define CRYPT_RESULT_SENDIDERR			 0x03
+#define CRYPT_RESULT_RECVIDERR			0x04
+#define CRYPT_RESULT_LENERR				 0x05
+#define CRYPT_RESULT_SEQERR				 0x06
+#define CRYPT_RESULT_ALGORITHMERR		  0x07
+#define CRYPT_RESULT_MACERR				 0x08
+#define CRYPT_RESULT_DECRYPTERR			  0x09
+#define CRYPT_RESULT_MAC_CMPERR				 0x10
+
+#define CRYPT_SM4_ECB     0x0401
+#define CRYPT_SM4_CBC     0x0402
+#define CRYPT_SM4_CFB     0x0404
+#define CRYPT_SM4_OFB     0x0408
+#define CRYPT_SM4_MAC     0x0410
+#define CRYPT_SM3_HMAC     0x0008
+
+
+//RS422
+#define RS422TYPEVARIABLECMD	0XA5	
+#define RS422INJECTIONCODE		0X03
+
 extern CListBox *g_pListBoxSendoutput;
 extern CListBox *g_pListBoxRecvoutput;
 
@@ -79,7 +124,22 @@ typedef struct
 	char *Buf;
 	int len;
 }RecvScanBuf;
-
+typedef struct
+{
+	char buffer[LVDSRS422SEGLENGTH];
+	char framehead[12];
+	unsigned short len;
+	char scanning;
+	int buffercnt;
+}lvdsRS422frame;
+typedef struct
+{
+	char buffer[LVDSRS422SEGLENGTH - 1];
+	int segmark;
+	bool issafebear;
+	int segNum;
+	int bufcnt;
+}dataseginfo;
 typedef struct
 {
 	unsigned short CmdBcnt;
@@ -139,6 +199,12 @@ enum{
 	ADCHANNEL_SYN = 2
 };
 void ListBoxInfo(CString str, CListBox *ListBoxSendoutput);
-
+unsigned int getUint32BE(unsigned char *pByte);
+unsigned int getUint24BE(unsigned char *pByte);
+unsigned short getUint16BE(unsigned char *pByte);
+void setUint32BE(unsigned int data, unsigned char *pByte);
+void setUint24BE(unsigned int data, unsigned char *pByte);
+void setUint16BE(unsigned short data, unsigned char *pByte);
+void invertBuffer(int len, unsigned char temp[MAX_ARG_LENGTH]);
 #endif
 
